@@ -80,7 +80,8 @@ module RailsActionTracker
         logs = Thread.current[THREAD_KEY]
         return unless logs
 
-        if (match = sql.match(/(FROM|INTO|UPDATE|INSERT INTO)\s+["']?(\w+)["']?/i))
+        return unless (match = sql.match(/(FROM|INTO|UPDATE|INSERT INTO)\s+["']?(\w+)["']?/i))
+
           table = match[2]
 
           # Skip ignored tables (case insensitive)
@@ -93,7 +94,6 @@ module RailsActionTracker
           else
             logs[:write] << table
           end
-        end
       end
 
       def log_message(message)

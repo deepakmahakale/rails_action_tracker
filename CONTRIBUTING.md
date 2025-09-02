@@ -1,233 +1,172 @@
 # Contributing to RailsActionTracker
 
-First off, thank you for considering contributing to RailsActionTracker! 🎉
+We welcome contributions to RailsActionTracker! This document provides guidelines for contributing to the project.
 
-The following is a set of guidelines for contributing to this project. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+## Getting Started
 
-## Code of Conduct
+Before contributing, please:
+1. Read this document completely
+2. Check existing issues and pull requests
+3. Set up your development environment (see [DEVELOPMENT.md](DEVELOPMENT.md))
 
-This project and everyone participating in it is governed by our commitment to creating a welcoming environment. By participating, you are expected to uphold this standard.
+## Types of Contributions
 
-## How Can I Contribute?
+### Bug Reports
+- **Search existing issues** first to avoid duplicates
+- **Use the issue template** if available
+- **Provide clear steps to reproduce** the bug
+- **Include relevant system information** (Ruby version, Rails version, gem version)
+- **Add error messages** and stack traces when applicable
 
-### Reporting Bugs
+### Feature Requests
+- **Explain the use case** for your proposed feature
+- **Provide examples** of how it would be used
+- **Consider backward compatibility** implications
+- **Discuss implementation approach** if you have ideas
 
-Before creating bug reports, please check the existing issues list as you might find out that you don't need to create one. When you are creating a bug report, please include as many details as possible:
-
-**Use a clear and descriptive title** for the issue to identify the problem.
-
-**Describe the exact steps which reproduce the problem** in as many details as possible.
-
-**Include these details:**
-- Ruby version (`ruby -v`)
-- Rails version
-- Gem version
-- Operating system
-- Complete error message and stack trace
-- Sample code that reproduces the issue
-
-### Suggesting Enhancements
-
-Enhancement suggestions are tracked as GitHub issues. When creating an enhancement suggestion, please include:
-
-- **Use a clear and descriptive title**
-- **Provide a step-by-step description** of the suggested enhancement
-- **Explain why this enhancement would be useful**
-- **Include examples** of how the enhancement would be used
-
-### Pull Requests
-
-1. Fork the repo and create your branch from `master`
-2. If you've added code that should be tested, add tests
-3. If you've changed APIs, update the documentation
-4. Ensure the test suite passes
-5. Make sure your code lints
-6. Issue that pull request!
+### Code Contributions
+- **Fork the repository** and create a feature branch
+- **Follow coding standards** (see Code Style section below)
+- **Write comprehensive tests** for your changes
+- **Update documentation** when needed
+- **Ensure CI passes** before submitting
 
 ## Development Process
 
-### Setting Up Development Environment
-
+### 1. Fork and Clone
 ```bash
-# Clone your fork
 git clone https://github.com/YOUR_USERNAME/rails_action_tracker.git
 cd rails_action_tracker
-
-# Install dependencies
-bundle install
-
-# Set up Appraisal for multi-Rails testing
-bundle exec appraisal install
 ```
 
-### Testing
-
-**Always run the full test suite before submitting:**
-
+### 2. Create Feature Branch
 ```bash
-# Quick test with current Ruby/Rails
+git checkout -b feature/your-feature-name
+# or
+git checkout -b fix/issue-description
+```
+
+### 3. Make Changes
+- Follow the coding standards outlined below
+- Write or update tests for your changes
+- Update documentation if needed
+
+### 4. Test Your Changes
+```bash
+# Run the full test suite
 bundle exec rake test
 
-# Test all Rails versions
+# Test against multiple Rails versions
 ./script/test-all
 
 # Check code style
 bundle exec rubocop
 ```
 
-**When adding new features:**
-- Add tests that cover the new functionality
-- Test edge cases and error conditions
-- Update integration tests if needed
+### 5. Submit Pull Request
+- **Write a clear title** and description
+- **Reference related issues** using keywords like "Closes #123"
+- **Explain your changes** and why they're needed
+- **Include screenshots** for UI changes (if applicable)
 
-**Test categories:**
-- Unit tests (`test/test_tracker.rb`)
-- Integration tests (`test/test_integration.rb`)
-- Middleware tests (`test/test_middleware.rb`)
-- Configuration tests (`test/test_configuration.rb`)
+## Code Style
 
-### Code Style
+### Ruby Style Guide
+We use RuboCop to enforce code style. Key points:
+- **Use single quotes** for string literals
+- **2 spaces** for indentation
+- **Line length**: 120 characters maximum
+- **Follow Ruby community conventions**
 
-We use RuboCop for code style enforcement:
+### Testing Standards
+- **Write tests** for all new functionality
+- **Update existing tests** when modifying behavior
+- **Use descriptive test names** that explain what is being tested
+- **Follow existing test patterns** in the codebase
 
-```bash
-# Check for style issues
-bundle exec rubocop
+### Documentation Standards
+- **Update README.md** for user-facing changes
+- **Add inline comments** for complex logic
+- **Update CHANGELOG.md** for notable changes
+- **Use clear, concise language**
 
-# Auto-fix what can be fixed automatically
-bundle exec rubocop -a
-```
-
-**Key style guidelines:**
-- Use 2 spaces for indentation
-- Keep lines under 120 characters
-- Use meaningful variable and method names
-- Add comments for complex logic
-- Follow Ruby community conventions
+## Commit Guidelines
 
 ### Commit Messages
+Follow these guidelines for commit messages:
+- **Use present tense** ("Add feature" not "Added feature")
+- **Use imperative mood** ("Move cursor to..." not "Moves cursor to...")
+- **Limit first line to 72 characters**
+- **Reference issues and pull requests** when applicable
 
-Write clear, concise commit messages:
-
+### Examples
 ```
-Add feature to track custom service patterns
+Add support for custom service detection patterns
 
-- Allow users to define custom regex patterns for service detection
-- Add configuration option `custom_services` 
-- Include tests for custom pattern matching
-- Update documentation with examples
+- Allow users to specify custom regex patterns for service detection
+- Update configuration documentation
+- Add comprehensive tests
 
 Closes #123
 ```
 
-**Format:**
-- Use the present tense ("Add feature" not "Added feature")
-- Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
-- Limit the first line to 72 characters or less
-- Reference issues and pull requests liberally after the first line
+## Review Process
 
-### Documentation
+### What to Expect
+- **All PRs require review** before merging
+- **Automated tests** must pass
+- **Code style checks** must pass
+- **Maintainer feedback** may require changes
 
-When changing functionality:
-- Update the README.md if needed
-- Update code comments
-- Add examples for new features
-- Update CHANGELOG.md
-
-### Branching Strategy
-
-- `master` - main development branch
-- Feature branches - `feature/your-feature-name`
-- Bug fixes - `fix/issue-description`
-- Documentation - `docs/what-you-updated`
-
-## Testing Guidelines
-
-### Writing Tests
-
-**Test structure:**
-```ruby
-def test_descriptive_name_of_what_is_being_tested
-  # Arrange - set up test data
-  tracker = RailsActionTracker::Tracker
-  tracker.configure(option: value)
-  
-  # Act - perform the action being tested
-  result = tracker.some_method(input)
-  
-  # Assert - verify the expected outcome
-  assert_equal expected_value, result
-  assert_includes collection, item
-end
-```
-
-**Test naming:**
-- Use descriptive names that explain the scenario
-- Include the expected behavior
-- Example: `test_ignores_tables_case_insensitively`
-
-**What to test:**
-- Happy path scenarios
-- Edge cases and boundary conditions  
-- Error conditions and exception handling
-- Configuration changes
-- Thread safety (where applicable)
-
-### Rails Version Compatibility
-
-When making changes, consider:
-- Will this work across all supported Rails versions?
-- Are there Rails version-specific APIs being used?
-- Test with both oldest and newest supported versions
-
-### Running Specific Tests
-
-```bash
-# Run single test file
-bundle exec ruby -Ilib:test test/test_tracker.rb
-
-# Run specific test method
-bundle exec ruby -Ilib:test test/test_tracker.rb -n test_specific_method
-
-# Run with verbose output
-bundle exec rake test TESTOPTS="-v"
-```
+### How to Address Feedback
+- **Respond to all comments** even if just to acknowledge
+- **Make requested changes** in new commits (don't force push)
+- **Ask for clarification** if feedback is unclear
+- **Be patient and respectful** during the review process
 
 ## Release Process
 
-(For maintainers)
+Releases are handled by maintainers:
+1. Version bump in `lib/rails_action_tracker/version.rb`
+2. Update `CHANGELOG.md` with changes
+3. Create git tag and push to GitHub
+4. Build and push gem to RubyGems
 
-1. **Prepare release:**
-   ```bash
-   # Update version in lib/rails_action_tracker/version.rb
-   # Update CHANGELOG.md with changes
-   git commit -am "Prepare release v0.x.x"
-   ```
+## Code of Conduct
 
-2. **Test thoroughly:**
-   ```bash
-   ./script/test-all
-   bundle exec rubocop
-   ```
+### Our Pledge
+We are committed to providing a friendly, safe, and welcoming environment for all contributors.
 
-3. **Create release:**
-   ```bash
-   git tag v0.x.x
-   git push origin master --tags
-   bundle exec rake release
-   ```
+### Expected Behavior
+- **Be respectful** and inclusive
+- **Accept constructive feedback** gracefully
+- **Focus on what's best** for the community
+- **Show empathy** towards other community members
+
+### Unacceptable Behavior
+- **Harassment** of any form
+- **Discriminatory language** or behavior
+- **Personal attacks** or trolling
+- **Publishing private information** without consent
 
 ## Getting Help
 
-- Create an issue for bugs or feature requests
-- Check existing issues and discussions
-- Look at the test suite for examples of usage
+### Resources
+- **Documentation**: Check README.md and other docs first
+- **Development Setup**: See [DEVELOPMENT.md](DEVELOPMENT.md)
+- **Issues**: Search existing issues for similar problems
+- **Discussions**: Use GitHub Discussions for questions
+
+### Contact
+- **GitHub Issues**: For bugs and feature requests
+- **GitHub Discussions**: For general questions
+- **Email**: For security issues or private matters
 
 ## Recognition
 
-Contributors will be recognized in:
-- Git commit history
-- GitHub contributors list  
-- Release notes for significant contributions
+Contributors are recognized in:
+- **CHANGELOG.md** for notable contributions
+- **GitHub contributors page** automatically
+- **Release notes** for significant features
 
-Thank you for contributing! 🚀
+Thank you for contributing to RailsActionTracker! 🎉
