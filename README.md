@@ -21,13 +21,13 @@ Start your Rails server and see the output:
 
 ```
 UsersController#show - Models and Services accessed during request:
-+-----------------------+-----------------------+-----------------------+
-| Models Read           | Models Written         | Services Accessed       |
-+-----------------------+-----------------------+-----------------------+
-| users                 | user_sessions         | Redis               |
-| posts                 | audit_logs            | Sidekiq             |
-| comments              |                       | ActionMailer        |
-+-----------------------+-----------------------+-----------------------+
++-------------------+-------------------+-------------------+
+| Models Read       | Models Written    | Services Accessed |
++-------------------+-------------------+-------------------+
+| users             | user_sessions     | Redis             |
+| posts             | audit_logs        | Sidekiq           |
+| comments          |                   | ActionMailer      |
++-------------------+-------------------+-------------------+
 ```
 
 ## Configuration

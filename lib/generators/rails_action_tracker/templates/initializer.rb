@@ -41,7 +41,31 @@ RailsActionTracker::Tracker.configure(
     # Add your custom ignored tables here
     # 'audit_logs',
     # 'session_data'
-  ]
+  ],
+
+  # Controllers to ignore completely (optional)
+  # All actions from these controllers will be ignored
+  ignored_controllers: [
+    # 'Rails::PwaController',  # Ignore PWA controller completely
+    # 'HealthCheckController', # Ignore health check controller
+    # 'Assets::ServingController'
+  ],
+
+  # Specific controller#action combinations to ignore (optional)
+  # Flexible patterns for fine-grained control
+  ignored_actions: {
+    # Ignore specific actions for specific controllers
+    # 'ApplicationController' => ['ping', 'status', 'health'],
+    # 'ApiController' => ['heartbeat', 'version'],
+    # 'AdminController' => ['dashboard_stats'],
+
+    # Ignore entire controllers using empty arrays or nil
+    # 'Rails::PwaController' => [],  # Empty array = ignore entire controller
+    # 'HealthController' => nil,     # nil = ignore entire controller
+
+    # Global action ignoring (ignore actions across ALL controllers)
+    # '' => ['ping', 'health', 'status']  # Empty string key = applies to all controllers
+  }
 )
 
 # Example configurations:
@@ -64,4 +88,16 @@ RailsActionTracker::Tracker.configure(
 #   print_to_rails_log: true,
 #   write_to_file: true,
 #   log_file_path: Rails.root.join('log', 'action_tracker.log')
+# )
+
+# Configuration 4: With controller/action filtering
+# RailsActionTracker::Tracker.configure(
+#   print_to_rails_log: true,
+#   ignored_controllers: ['Rails::PwaController', 'HealthCheckController'],
+#   ignored_actions: {
+#     '' => ['ping', 'health'],                    # Global actions to ignore
+#     'ApplicationController' => ['status'],        # Controller-specific actions
+#     'MonitoringController' => [],                 # Ignore entire controller
+#     'ApiController' => ['heartbeat', 'version']   # Multiple specific actions
+#   }
 # )
