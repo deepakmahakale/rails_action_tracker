@@ -70,7 +70,8 @@ $ gem install rails_action_tracker
 RailsActionTracker::Tracker.configure(
   print_to_rails_log: true,  # Print to Rails logger (default: true)
   write_to_file: false,      # Write to separate file (default: false)
-  log_file_path: nil         # Path to separate log file (required if write_to_file: true)
+  log_file_path: nil,        # Path to separate log file (required if write_to_file: true)
+  ignored_tables: []         # Tables to ignore from tracking (optional)
 )
 ```
 
@@ -116,6 +117,29 @@ RailsActionTracker::Tracker.configure(
   ]
 )
 ```
+
+### Ignoring Tables
+
+You can specify tables to ignore from tracking (useful for system tables, audit logs, etc.):
+
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_to_rails_log: true,
+  ignored_tables: [
+    'pg_attribute',        # PostgreSQL system tables
+    'pg_index',
+    'pg_class', 
+    'ar_internal_metadata', # Rails internal tables
+    'schema_migrations',
+    'audit_logs',          # Your custom tables to ignore
+    'session_data'
+  ]
+)
+```
+
+**Default ignored tables:**
+- `pg_attribute`, `pg_index`, `pg_class`, `pg_namespace`, `pg_type` (PostgreSQL system tables)
+- `ar_internal_metadata`, `schema_migrations` (Rails internal tables)
 
 ## Manual Usage
 

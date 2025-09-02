@@ -14,7 +14,8 @@ module RailsActionTracker
           print_to_rails_log: true,
           write_to_file: false,
           log_file_path: nil,
-          services: []
+          services: [],
+          ignored_tables: ['pg_attribute', 'pg_index', 'pg_class', 'pg_namespace', 'pg_type', 'ar_internal_metadata', 'schema_migrations']
         }.merge(options)
 
         setup_custom_logger if @config[:write_to_file] && @config[:log_file_path]
@@ -77,6 +78,11 @@ module RailsActionTracker
 
         if match = sql.match(/(FROM|INTO|UPDATE|INSERT INTO)\s+["']?(\w+)["']?/i)
           table = match[2]
+          
+          # Skip ignored tables
+          ignored_tables = config&.dig(:ignored_tables) || ['pg_attribute', 'pg_index', 'pg_class', 'pg_namespace', 'pg_type', 'ar_internal_metadata', 'schema_migrations']
+          return if ignored_tables.include?(table.downcase)
+          
           if sql =~ /\A\s*SELECT/i
             logs[:read] << table
           else

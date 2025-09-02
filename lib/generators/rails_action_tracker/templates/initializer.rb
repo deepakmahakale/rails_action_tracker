@@ -24,6 +24,21 @@ RailsActionTracker::Tracker.configure(
     { name: "Elasticsearch", pattern: /elasticsearch/i },
     # Add your custom services here
     # { name: "CustomService", pattern: /custom_pattern/i },
+  ],
+
+  # Tables to ignore during tracking (optional)
+  # These tables will not appear in the tracking output
+  ignored_tables: [
+    'pg_attribute',        # PostgreSQL system table
+    'pg_index',           # PostgreSQL system table  
+    'pg_class',           # PostgreSQL system table
+    'pg_namespace',       # PostgreSQL system table
+    'pg_type',            # PostgreSQL system table
+    'ar_internal_metadata', # Rails internal table
+    'schema_migrations',   # Rails migrations table
+    # Add your custom ignored tables here
+    # 'audit_logs',
+    # 'session_data'
   ]
 )
 
