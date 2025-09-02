@@ -129,6 +129,7 @@ module RailsActionTracker
         services_accessed.uniq
       end
 
+      # rubocop:disable Style/OptionalBooleanParameter
       def format_summary(read_models, write_models, services, controller_action = nil, colorize = true)
         if colorize && defined?(Rails) && Rails.logger.respond_to?(:colorize_logging) && Rails.logger.colorize_logging
           # Use Rails default colors when available
@@ -164,6 +165,7 @@ module RailsActionTracker
         table += "+-----------------------+-----------------------+-----------------------+\n"
         table
       end
+      # rubocop:enable Style/OptionalBooleanParameter
 
       def log_output(colored_output, plain_output)
         if config.nil?
