@@ -6,10 +6,15 @@ require 'minitest/autorun'
 require 'mocha/minitest'
 
 # Set up a minimal Rails environment for testing
+# Require logger first to avoid Rails 6.1 LoggerThreadSafeLevel issues
+require 'logger'
+
+# Ensure Logger constant is available globally before ActiveSupport loads
+Object.const_set(:Logger, Logger) unless defined?(::Logger)
+
 require 'active_support'
 require 'active_support/notifications'
 require 'action_dispatch'
-require 'logger'
 
 # Mock Rails for testing
 module Rails

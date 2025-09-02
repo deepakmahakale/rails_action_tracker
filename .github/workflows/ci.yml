@@ -41,13 +41,12 @@ jobs:
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-
           ${{ runner.os }}-gems-
 
-    - name: Install dependencies
+    - name: Install base dependencies for Appraisal
       run: |
         bundle config set --local path vendor/bundle
-        bundle config set --local without 'development'
-        bundle install --jobs 4 --retry 3
+        bundle install --jobs 4 --retry 3 --without development
 
-    - name: Generate Appraisal gemfiles
+    - name: Generate and install Appraisal gemfiles
       run: bundle exec appraisal install
 
     - name: Run tests
