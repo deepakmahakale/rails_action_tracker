@@ -32,8 +32,14 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Dependencies
-  spec.add_dependency "rails", ">= 6.0"
-  spec.add_dependency "activesupport", ">= 6.0"
+  spec.add_dependency "rails", ">= 5.0"
+  spec.add_dependency "activesupport", ">= 5.0"
+  
+  # Development dependencies
+  spec.add_development_dependency "minitest", "~> 5.0"
+  spec.add_development_dependency "appraisal", "~> 2.4"
+  spec.add_development_dependency "sqlite3", "~> 1.4"
+  spec.add_development_dependency "mocha", "~> 2.0"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html

@@ -6,3 +6,9 @@
 /pkg/
 /spec/reports/
 /tmp/
+
+# Built gems
+*.gem
+
+# Appraisal generated files
+/gemfiles/
