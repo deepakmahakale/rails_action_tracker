@@ -49,9 +49,12 @@ module RailsActionTracker
         write_models = logs[:write].to_a.uniq.sort
 
         controller_action = "#{logs[:controller]}##{logs[:action]}" if logs[:controller] && logs[:action]
-        output = format_summary(read_models, write_models, services_accessed, controller_action)
         
-        log_output(output)
+        # Generate outputs with and without colors
+        colored_output = format_summary(read_models, write_models, services_accessed, controller_action, true)
+        plain_output = format_summary(read_models, write_models, services_accessed, controller_action, false)
+        
+        log_output(colored_output, plain_output)
       end
 
       private
@@ -118,12 +121,17 @@ module RailsActionTracker
         services_accessed.uniq
       end
 
-      def format_summary(read_models, write_models, services, controller_action = nil)
-        green = "\e[32m"
-        red = "\e[31m"
-        blue = "\e[34m"
-        yellow = "\e[33m"
-        reset = "\e[0m"
+      def format_summary(read_models, write_models, services, controller_action = nil, colorize = true)
+        if colorize && defined?(Rails) && Rails.logger.respond_to?(:colorize_logging) && Rails.logger.colorize_logging
+          # Use Rails default colors when available
+          green = defined?(ActiveSupport::LogSubscriber::GREEN) ? ActiveSupport::LogSubscriber::GREEN : "\e[32m"
+          red = defined?(ActiveSupport::LogSubscriber::RED) ? ActiveSupport::LogSubscriber::RED : "\e[31m"  
+          blue = defined?(ActiveSupport::LogSubscriber::BLUE) ? ActiveSupport::LogSubscriber::BLUE : "\e[34m"
+          yellow = defined?(ActiveSupport::LogSubscriber::YELLOW) ? ActiveSupport::LogSubscriber::YELLOW : "\e[33m"
+          reset = defined?(ActiveSupport::LogSubscriber::CLEAR) ? ActiveSupport::LogSubscriber::CLEAR : "\e[0m"
+        else
+          green = red = blue = yellow = reset = ""
+        end
 
         max_rows = [read_models.size, write_models.size, services.size].max
         
@@ -148,16 +156,16 @@ module RailsActionTracker
         table
       end
 
-      def log_output(output)
+      def log_output(colored_output, plain_output)
         if config.nil?
-          Rails.logger.info "\n#{output}" if defined?(Rails)
+          Rails.logger.info "\n#{colored_output}" if defined?(Rails)
         else
           if config[:print_to_rails_log] && defined?(Rails)
-            Rails.logger.info "\n#{output}"
+            Rails.logger.info "\n#{colored_output}"
           end
 
           if config[:write_to_file] && custom_logger
-            custom_logger.info "\n#{output}"
+            custom_logger.info "\n#{plain_output}"
           end
         end
       end
