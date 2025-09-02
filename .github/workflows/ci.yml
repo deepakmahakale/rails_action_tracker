@@ -41,7 +41,7 @@ jobs:
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-
           ${{ runner.os }}-gems-
 
-    - name: Install base dependencies for Appraisal
+    - name: Install only test dependencies (Appraisal will handle Rails versions)
       run: |
         bundle config set --local path vendor/bundle
         bundle install --jobs 4 --retry 3 --without development

@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  # Dependencies
+  # Runtime dependencies
   spec.add_dependency 'actionpack', '>= 5.0' # For ActionDispatch::Request
   spec.add_dependency 'activesupport', '>= 5.0'
   spec.add_dependency 'railties', '>= 5.0' # For Rails::Railtie

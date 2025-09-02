@@ -19,6 +19,8 @@ require 'action_dispatch'
 # Mock Rails for testing
 module Rails
   class << self
+    attr_writer :env, :logger
+
     def env
       @env ||= ActiveSupport::StringInquirer.new('test')
     end
