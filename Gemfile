@@ -8,10 +8,10 @@ gemspec
 gem 'rake', '~> 13.0'
 
 group :test do
+  gem 'appraisal', '~> 2.4'
   gem 'minitest', '~> 5.16'
   gem 'mocha', '~> 2.0'
   gem 'sqlite3', '~> 1.4'
-  gem 'appraisal', '~> 2.4'
 end
 
 group :development do

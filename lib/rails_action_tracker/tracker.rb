@@ -151,49 +151,102 @@ module RailsActionTracker
 
       # rubocop:disable Style/OptionalBooleanParameter
       def format_summary(read_models, write_models, services, controller_action = nil, colorize = true)
-        if colorize && defined?(Rails) && Rails.logger.respond_to?(:colorize_logging) && Rails.logger.colorize_logging
-          # Use Rails default colors when available
-          green = defined?(ActiveSupport::LogSubscriber::GREEN) ? ActiveSupport::LogSubscriber::GREEN : "\e[32m"
-          red = defined?(ActiveSupport::LogSubscriber::RED) ? ActiveSupport::LogSubscriber::RED : "\e[31m"
-          blue = defined?(ActiveSupport::LogSubscriber::BLUE) ? ActiveSupport::LogSubscriber::BLUE : "\e[34m"
-          yellow = defined?(ActiveSupport::LogSubscriber::YELLOW) ? ActiveSupport::LogSubscriber::YELLOW : "\e[33m"
-          reset = defined?(ActiveSupport::LogSubscriber::CLEAR) ? ActiveSupport::LogSubscriber::CLEAR : "\e[0m"
-        else
-          green = red = blue = yellow = reset = ''
-        end
-
+        colors = setup_colors(colorize)
         max_rows = [read_models.size, write_models.size, services.size].max
 
-        if max_rows.zero?
-          header = controller_action ? "#{yellow}#{controller_action}#{reset}: " : ''
-          return "#{header}No models or services accessed during this request.\n"
-        end
+        return format_empty_summary(controller_action, colors) if max_rows.zero?
 
-        read_models += [''] * (max_rows - read_models.size)
-        write_models += [''] * (max_rows - write_models.size)
-        services += [''] * (max_rows - services.size)
+        padded_arrays = pad_arrays_to_max_length(read_models, write_models, services, max_rows)
+        column_widths = calculate_column_widths(padded_arrays[:read], padded_arrays[:write], padded_arrays[:services])
 
-        # Calculate dynamic column widths
-        read_width = [read_models.map(&:length).max || 0, 'Models Read'.length].max
-        write_width = [write_models.map(&:length).max || 0, 'Models Written'.length].max
-        services_width = [services.map(&:length).max || 0, 'Services Accessed'.length].max
-
-        # Create separator line
-        separator = "+#{'-' * (read_width + 2)}+#{'-' * (write_width + 2)}+#{'-' * (services_width + 2)}+"
-
-        header = controller_action ? "#{yellow}#{controller_action}#{reset} - " : ''
-        table = "#{header}Models and Services accessed during request:\n"
-        table += "#{separator}\n"
-        table += "| #{green}#{'Models Read'.ljust(read_width)}#{reset} | #{red}#{'Models Written'.ljust(write_width)}#{reset} | " \
-                 "#{blue}#{'Services Accessed'.ljust(services_width)}#{reset} |\n"
-        table += "#{separator}\n"
-        max_rows.times do |i|
-          table += "| #{read_models[i].ljust(read_width)} | #{write_models[i].ljust(write_width)} | #{services[i].ljust(services_width)} |\n"
-        end
-        table += "#{separator}\n"
-        table
+        build_table(padded_arrays, column_widths, controller_action, colors, max_rows)
       end
       # rubocop:enable Style/OptionalBooleanParameter
+
+      def setup_colors(colorize)
+        return { green: '', red: '', blue: '', yellow: '', reset: '' } unless colorize
+        return default_colors unless rails_colorized?
+
+        {
+          green: fetch_rails_color('GREEN', "\e[32m"),
+          red: fetch_rails_color('RED', "\e[31m"),
+          blue: fetch_rails_color('BLUE', "\e[34m"),
+          yellow: fetch_rails_color('YELLOW', "\e[33m"),
+          reset: fetch_rails_color('CLEAR', "\e[0m")
+        }
+      end
+
+      def default_colors
+        { green: '', red: '', blue: '', yellow: '', reset: '' }
+      end
+
+      def rails_colorized?
+        defined?(Rails) && Rails.logger.respond_to?(:colorize_logging) && Rails.logger.colorize_logging
+      end
+
+      def fetch_rails_color(color_name, fallback)
+        if defined?(ActiveSupport::LogSubscriber.const_get(color_name))
+          ActiveSupport::LogSubscriber.const_get(color_name)
+        else
+          fallback
+        end
+      end
+
+      def format_empty_summary(controller_action, colors)
+        header = controller_action ? "#{colors[:yellow]}#{controller_action}#{colors[:reset]}: " : ''
+        "#{header}No models or services accessed during this request.\n"
+      end
+
+      def pad_arrays_to_max_length(read_models, write_models, services, max_rows)
+        {
+          read: read_models + [''] * (max_rows - read_models.size),
+          write: write_models + [''] * (max_rows - write_models.size),
+          services: services + [''] * (max_rows - services.size)
+        }
+      end
+
+      def calculate_column_widths(read_models, write_models, services)
+        {
+          read: [read_models.map(&:length).max || 0, 'Models Read'.length].max,
+          write: [write_models.map(&:length).max || 0, 'Models Written'.length].max,
+          services: [services.map(&:length).max || 0, 'Services Accessed'.length].max
+        }
+      end
+
+      def build_table(arrays, widths, controller_action, colors, max_rows)
+        separator = build_separator(widths)
+        header = controller_action ? "#{colors[:yellow]}#{controller_action}#{colors[:reset]} - " : ''
+
+        table = "#{header}Models and Services accessed during request:\n"
+        table += "#{separator}\n"
+        table += build_header_row(widths, colors)
+        table += "#{separator}\n"
+        table += build_data_rows(arrays, widths, max_rows)
+        table + "#{separator}\n"
+      end
+
+      def build_separator(widths)
+        "+#{'-' * (widths[:read] + 2)}+#{'-' * (widths[:write] + 2)}+#{'-' * (widths[:services] + 2)}+"
+      end
+
+      def build_header_row(widths, colors)
+        read_header = "#{colors[:green]}#{'Models Read'.ljust(widths[:read])}#{colors[:reset]}"
+        write_header = "#{colors[:red]}#{'Models Written'.ljust(widths[:write])}#{colors[:reset]}"
+        services_header = "#{colors[:blue]}#{'Services Accessed'.ljust(widths[:services])}#{colors[:reset]}"
+
+        "| #{read_header} | #{write_header} | #{services_header} |\n"
+      end
+
+      def build_data_rows(arrays, widths, max_rows)
+        table = ''
+        max_rows.times do |i|
+          read_cell = arrays[:read][i].ljust(widths[:read])
+          write_cell = arrays[:write][i].ljust(widths[:write])
+          services_cell = arrays[:services][i].ljust(widths[:services])
+          table += "| #{read_cell} | #{write_cell} | #{services_cell} |\n"
+        end
+        table
+      end
 
       def log_output(colored_output, plain_output)
         if config.nil?

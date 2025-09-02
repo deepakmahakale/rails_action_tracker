@@ -38,6 +38,8 @@ Style/ClassAndModuleChildren:
 # Reasonable limits for a gem project
 Metrics/ClassLength:
   Max: 200
+  Exclude:
+    - 'lib/rails_action_tracker/tracker.rb'
 
 Metrics/MethodLength:
   Max: 30
