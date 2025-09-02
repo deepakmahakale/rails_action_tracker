@@ -76,10 +76,20 @@ module RailsActionTracker
         ignored_controllers = config[:ignored_controllers] || []
         return true if ignored_controllers.include?(controller)
 
-        # Check if specific controller#action combination is ignored
+        # Check controller-specific action ignores
         ignored_actions = config[:ignored_actions] || {}
-        controller_actions = ignored_actions[controller] || []
-        return true if controller_actions.include?(action)
+
+        # Handle flexible controller/action filtering
+        ignored_actions.each do |pattern_controller, actions|
+          # Match controller name (exact match or empty string for all controllers)
+          next unless pattern_controller.empty? || pattern_controller == controller
+
+          # If actions is empty array or nil, ignore entire controller
+          return true if actions.nil? || (actions.is_a?(Array) && actions.empty?)
+
+          # Check specific actions
+          return true if actions.is_a?(Array) && actions.include?(action)
+        end
 
         false
       end

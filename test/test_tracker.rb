@@ -212,4 +212,113 @@ class TestTracker < Minitest::Test
     assert_equal 'UsersController', logs[:controller]
     assert_equal 'show', logs[:action]
   end
+
+  def test_should_ignore_controller_action_with_ignored_controllers
+    @tracker.configure(ignored_controllers: ['Rails::PwaController', 'HealthController'])
+
+    # Should ignore entire controllers
+    assert @tracker.send(:should_ignore_controller_action?, 'Rails::PwaController', 'manifest')
+    assert @tracker.send(:should_ignore_controller_action?, 'HealthController', 'check')
+
+    # Should not ignore other controllers
+    refute @tracker.send(:should_ignore_controller_action?, 'UsersController', 'show')
+  end
+
+  def test_should_ignore_controller_action_with_specific_actions
+    @tracker.configure(ignored_actions: {
+                         'ApplicationController' => %w[ping status],
+                         'ApiController' => ['heartbeat']
+                       })
+
+    # Should ignore specific actions
+    assert @tracker.send(:should_ignore_controller_action?, 'ApplicationController', 'ping')
+    assert @tracker.send(:should_ignore_controller_action?, 'ApplicationController', 'status')
+    assert @tracker.send(:should_ignore_controller_action?, 'ApiController', 'heartbeat')
+
+    # Should not ignore other actions
+    refute @tracker.send(:should_ignore_controller_action?, 'ApplicationController', 'index')
+    refute @tracker.send(:should_ignore_controller_action?, 'ApiController', 'show')
+    refute @tracker.send(:should_ignore_controller_action?, 'UsersController', 'ping')
+  end
+
+  def test_should_ignore_controller_action_with_empty_array_ignores_controller
+    @tracker.configure(ignored_actions: {
+                         'Rails::PwaController' => [], # Empty array = ignore entire controller
+                         'HealthController' => nil     # nil = ignore entire controller
+                       })
+
+    # Should ignore entire controllers
+    assert @tracker.send(:should_ignore_controller_action?, 'Rails::PwaController', 'manifest')
+    assert @tracker.send(:should_ignore_controller_action?, 'Rails::PwaController', 'any_action')
+    assert @tracker.send(:should_ignore_controller_action?, 'HealthController', 'check')
+    assert @tracker.send(:should_ignore_controller_action?, 'HealthController', 'status')
+
+    # Should not ignore other controllers
+    refute @tracker.send(:should_ignore_controller_action?, 'UsersController', 'show')
+  end
+
+  def test_should_ignore_controller_action_with_global_actions
+    @tracker.configure(ignored_actions: {
+                         '' => %w[ping health status] # Global actions to ignore
+                       })
+
+    # Should ignore these actions from any controller
+    assert @tracker.send(:should_ignore_controller_action?, 'ApplicationController', 'ping')
+    assert @tracker.send(:should_ignore_controller_action?, 'UsersController', 'health')
+    assert @tracker.send(:should_ignore_controller_action?, 'ApiController', 'status')
+    assert @tracker.send(:should_ignore_controller_action?, 'AnyController', 'ping')
+
+    # Should not ignore other actions
+    refute @tracker.send(:should_ignore_controller_action?, 'UsersController', 'show')
+    refute @tracker.send(:should_ignore_controller_action?, 'ApplicationController', 'index')
+  end
+
+  def test_should_ignore_controller_action_with_combined_patterns
+    @tracker.configure(
+      ignored_controllers: ['Rails::PwaController'],
+      ignored_actions: {
+        '' => ['ping'],                                     # Global ignore
+        'ApplicationController' => ['status'],              # Controller-specific
+        'MonitoringController' => [],                       # Ignore entire controller
+        'ApiController' => %w[heartbeat version] # Multiple specific actions
+      }
+    )
+
+    # Test ignored_controllers
+    assert @tracker.send(:should_ignore_controller_action?, 'Rails::PwaController', 'manifest')
+
+    # Test global actions
+    assert @tracker.send(:should_ignore_controller_action?, 'UsersController', 'ping')
+    assert @tracker.send(:should_ignore_controller_action?, 'ApiController', 'ping')
+
+    # Test controller-specific actions
+    assert @tracker.send(:should_ignore_controller_action?, 'ApplicationController', 'status')
+    refute @tracker.send(:should_ignore_controller_action?, 'UsersController', 'status')
+
+    # Test entire controller ignore with empty array
+    assert @tracker.send(:should_ignore_controller_action?, 'MonitoringController', 'any_action')
+
+    # Test multiple specific actions
+    assert @tracker.send(:should_ignore_controller_action?, 'ApiController', 'heartbeat')
+    assert @tracker.send(:should_ignore_controller_action?, 'ApiController', 'version')
+    refute @tracker.send(:should_ignore_controller_action?, 'ApiController', 'show')
+
+    # Test actions that should not be ignored
+    refute @tracker.send(:should_ignore_controller_action?, 'UsersController', 'show')
+    refute @tracker.send(:should_ignore_controller_action?, 'ApplicationController', 'index')
+  end
+
+  def test_should_ignore_controller_action_no_config
+    # Should not ignore anything when no config is set
+    refute @tracker.send(:should_ignore_controller_action?, 'UsersController', 'show')
+  end
+
+  def test_should_ignore_controller_action_missing_params
+    @tracker.configure(ignored_controllers: ['TestController'])
+
+    # Should return false for missing controller or action
+    refute @tracker.send(:should_ignore_controller_action?, nil, 'show')
+    refute @tracker.send(:should_ignore_controller_action?, 'UsersController', nil)
+    refute @tracker.send(:should_ignore_controller_action?, nil, nil)
+  end
 end

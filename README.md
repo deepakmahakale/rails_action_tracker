@@ -136,17 +136,23 @@ RailsActionTracker::Tracker.configure(
 
 ### Ignoring Controllers and Actions
 
-You can ignore entire controllers or specific controller#action combinations:
+You have flexible options for ignoring controllers and actions to reduce noise:
 
+#### Simple Controller Ignoring
 ```ruby
 RailsActionTracker::Tracker.configure(
-  print_to_rails_log: true,
   # Ignore entire controllers (all actions)
   ignored_controllers: [
     'Rails::PwaController',  # Ignore PWA controller completely
-    'HealthCheckController'  # Ignore health check controller
-  ],
+    'HealthCheckController', # Ignore health check controller
+    'Assets::ServingController'
+  ]
+)
+```
 
+#### Basic Action Ignoring
+```ruby
+RailsActionTracker::Tracker.configure(
   # Ignore specific controller#action combinations
   ignored_actions: {
     'ApplicationController' => ['ping', 'status'],  # Ignore specific actions
@@ -156,10 +162,87 @@ RailsActionTracker::Tracker.configure(
 )
 ```
 
-**Use cases:**
-- Ignore PWA controllers that generate noise: `'Rails::PwaController'`
-- Skip health check endpoints: `'HealthCheckController'`
-- Ignore monitoring/status actions: `{'ApplicationController' => ['ping', 'status']}`
+#### Advanced Flexible Action Ignoring
+
+The `ignored_actions` configuration supports flexible patterns:
+
+**1. Ignore entire controller by providing empty actions array:**
+```ruby
+RailsActionTracker::Tracker.configure(
+  ignored_actions: {
+    'Rails::PwaController' => [],  # Empty array = ignore entire controller
+    'HealthController' => nil      # nil = ignore entire controller
+  }
+)
+```
+
+**2. Ignore specific actions for multiple controllers:**
+```ruby
+RailsActionTracker::Tracker.configure(
+  ignored_actions: {
+    'ApplicationController' => ['ping', 'status', 'health'],
+    'ApiController' => ['heartbeat', 'version'],
+    'AdminController' => ['dashboard_stats', 'system_info']
+  }
+)
+```
+
+**3. Global action ignoring (ignore actions across ALL controllers):**
+```ruby
+RailsActionTracker::Tracker.configure(
+  ignored_actions: {
+    '' => ['ping', 'status', 'health']  # Empty string key = applies to all controllers
+  }
+)
+```
+
+This will ignore the `ping`, `status`, and `health` actions regardless of which controller they're called from.
+
+**4. Combined patterns:**
+```ruby
+RailsActionTracker::Tracker.configure(
+  ignored_controllers: [
+    'Rails::PwaController'  # Ignore this controller completely
+  ],
+  ignored_actions: {
+    '' => ['ping', 'health'],                    # Global actions to ignore
+    'ApplicationController' => ['status'],        # Controller-specific actions
+    'MonitoringController' => [],                 # Ignore entire controller
+    'ApiController' => ['heartbeat', 'version']   # Multiple specific actions
+  }
+)
+```
+
+#### Common Use Cases
+
+**Ignore noisy Rails controllers:**
+```ruby
+ignored_controllers: ['Rails::PwaController', 'Rails::ConductorController']
+```
+
+**Ignore health/monitoring endpoints:**
+```ruby
+ignored_actions: {
+  '' => ['ping', 'health', 'status', 'heartbeat']  # Global ignore
+}
+```
+
+**Ignore admin dashboard noise:**
+```ruby
+ignored_actions: {
+  'AdminController' => ['dashboard_stats', 'system_metrics'],
+  'MonitoringController' => []  # Ignore entire monitoring controller
+}
+```
+
+**Development/debugging setup:**
+```ruby
+ignored_actions: {
+  '' => ['ping', 'health'],  # Always ignore these
+  'DevelopmentController' => [], # Ignore entire dev controller
+  'TestController' => ['debug', 'trace']
+}
+```
 
 ## Manual Usage
 
