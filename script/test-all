@@ -1,0 +1,65 @@
+#!/bin/bash
+
+set -e
+
+echo "🚀 Testing Rails Action Tracker across all Rails versions..."
+echo
+
+# Colors for output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Track results
+PASSED=()
+FAILED=()
+
+# Rails versions to test
+RAILS_VERSIONS=(
+  "rails-5.0"
+  "rails-5.1" 
+  "rails-5.2"
+  "rails-6.0"
+  "rails-6.1"
+  "rails-7.0"
+  "rails-7.1"
+  "rails-8.0"
+)
+
+echo -e "${YELLOW}Installing Appraisal gemfiles...${NC}"
+bundle exec appraisal install
+echo
+
+for rails_version in "${RAILS_VERSIONS[@]}"; do
+  echo -e "${YELLOW}Testing $rails_version...${NC}"
+  
+  if bundle exec appraisal $rails_version rake test; then
+    echo -e "${GREEN}✅ $rails_version PASSED${NC}"
+    PASSED+=($rails_version)
+  else
+    echo -e "${RED}❌ $rails_version FAILED${NC}"
+    FAILED+=($rails_version)
+  fi
+  echo
+done
+
+echo "========================================="
+echo "📊 SUMMARY:"
+echo "========================================="
+echo -e "${GREEN}✅ PASSED (${#PASSED[@]}):${NC}"
+for version in "${PASSED[@]}"; do
+  echo "  - $version"
+done
+
+if [ ${#FAILED[@]} -ne 0 ]; then
+  echo -e "${RED}❌ FAILED (${#FAILED[@]}):${NC}"
+  for version in "${FAILED[@]}"; do
+    echo "  - $version"
+  done
+  echo
+  exit 1
+else
+  echo -e "${GREEN}🎉 All Rails versions passed!${NC}"
+  echo
+fi
