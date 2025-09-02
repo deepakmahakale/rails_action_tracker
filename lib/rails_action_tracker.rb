@@ -8,6 +8,6 @@ module RailsActionTracker
   class Error < StandardError; end
 end
 
-if defined?(Rails)
+if defined?(Rails) && defined?(Rails::Railtie)
   require_relative "rails_action_tracker/railtie"
 end

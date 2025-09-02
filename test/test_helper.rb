@@ -6,9 +6,8 @@ require "minitest/autorun"
 require "mocha/minitest"
 
 # Set up a minimal Rails environment for testing
-require "rails"
 require "active_support"
-require "active_support/notifications"
+require "active_support/notifications"  
 require "action_dispatch"
 require "logger"
 
