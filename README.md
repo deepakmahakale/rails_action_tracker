@@ -1,28 +1,160 @@
 # RailsActionTracker
 
-TODO: Delete this and the text below, and describe your gem
+A Rails gem that provides detailed tracking of ActiveRecord model read/write operations and service usage during controller action execution. This gem helps you understand what your Rails actions are doing under the hood by showing you exactly which models are being accessed and what services are being called.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/rails_action_tracker`. To experiment with that code, run `bin/console` for an interactive prompt.
+## Features
+
+- 🔍 Track ActiveRecord model read and write operations
+- 🏢 Monitor service usage (Redis, Sidekiq, Pusher, HTTP calls, etc.)
+- 📝 Configurable logging options (Rails logger, separate log file, or both)
+- 🎨 Colorized tabular output for easy reading
+- ⚡ Thread-safe tracking
+- 🔧 Customizable service detection patterns
+- 🚀 Automatic integration via Rails middleware
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add this line to your application's Gemfile:
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+gem 'rails_action_tracker'
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+And then execute:
 
 ```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+$ bundle install
 ```
 
-## Usage
+Or install it yourself as:
 
-TODO: Write usage instructions here
+```bash
+$ gem install rails_action_tracker
+```
+
+## Quick Start
+
+1. **Install the gem** (see above)
+
+2. **Generate the configuration file**:
+   ```bash
+   rails generate rails_action_tracker:install
+   ```
+
+3. **Configure the gem** in `config/initializers/rails_action_tracker.rb`:
+   ```ruby
+   RailsActionTracker::Tracker.configure(
+     print_to_rails_log: true,  # Print to Rails logger
+     write_to_file: true,       # Also write to separate file
+     log_file_path: Rails.root.join('log', 'action_tracker.log')
+   )
+   ```
+
+4. **Start your Rails server** and make requests. You'll see output like:
+   ```
+   Models and Services accessed during request:
+   +-----------------------+-----------------------+-----------------------+
+   | Models Read           | Models Written         | Services Accessed       |
+   +-----------------------+-----------------------+-----------------------+
+   | users                 | user_sessions         | Redis               |
+   | posts                 | audit_logs            | Sidekiq             |
+   | comments              |                       | ActionMailer        |
+   +-----------------------+-----------------------+-----------------------+
+   ```
+
+## Configuration Options
+
+### Basic Configuration
+
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_to_rails_log: true,  # Print to Rails logger (default: true)
+  write_to_file: false,      # Write to separate file (default: false)
+  log_file_path: nil         # Path to separate log file (required if write_to_file: true)
+)
+```
+
+### Configuration Examples
+
+**Option 1: Only log to Rails logger (default)**
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_to_rails_log: true,
+  write_to_file: false
+)
+```
+
+**Option 2: Only log to separate file**
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_to_rails_log: false,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'action_tracker.log')
+)
+```
+
+**Option 3: Log to both Rails logger and separate file**
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'action_tracker.log')
+)
+```
+
+### Custom Service Detection
+
+You can customize which services are detected by providing custom patterns:
+
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_to_rails_log: true,
+  services: [
+    { name: "Redis", pattern: /redis/i },
+    { name: "CustomAPI", pattern: /custom_api|my_service/i },
+    { name: "PaymentGateway", pattern: /stripe|paypal/i }
+  ]
+)
+```
+
+## Manual Usage
+
+You can also use the tracker manually in your code:
+
+```ruby
+# Start tracking
+RailsActionTracker::Tracker.start_tracking
+
+# Your code here...
+User.find(1)
+Post.create(title: "Hello")
+
+# Print summary and stop tracking
+RailsActionTracker::Tracker.print_summary
+RailsActionTracker::Tracker.stop_tracking
+```
+
+## How It Works
+
+The gem works by:
+
+1. **Installing middleware** that automatically wraps each Rails request
+2. **Subscribing to ActiveSupport::Notifications** for SQL queries and other Rails events
+3. **Parsing SQL queries** to determine which models are being read from or written to
+4. **Detecting service usage** by analyzing log messages and notification payloads
+5. **Generating a summary table** showing all the activity for that request
+
+## Thread Safety
+
+The gem is thread-safe and uses thread-local storage to track operations. Each request is tracked independently, so concurrent requests won't interfere with each other.
+
+## Performance Impact
+
+The gem is designed to have minimal performance impact:
+- Only active during non-test environments by default
+- Uses efficient Set data structures for deduplication
+- Subscribes only to necessary notification channels
+- Skips tracking for asset requests and common non-action paths
 
 ## Development
 
@@ -32,7 +164,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/rails_action_tracker.
+Bug reports and pull requests are welcome on GitHub at https://github.com/deepakmahakale/rails_action_tracker.
 
 ## License
 
