@@ -34,7 +34,7 @@ jobs:
         path: |
           vendor/bundle
           gemfiles/vendor/bundle
-        key: ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-${{ hashFiles('**/Gemfile.lock', 'gemfiles/*.gemfile.lock', 'Appraisals') }}
+        key: ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-${{ hashFiles('Gemfile', 'gemfiles/*.gemfile.lock', 'Appraisals') }}
         restore-keys: |
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-

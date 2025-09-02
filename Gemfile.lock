@@ -74,8 +74,6 @@ GEM
       ruby2_keywords (>= 0.0.5)
     nokogiri (1.18.9-x86_64-darwin)
       racc (~> 1.4)
-    nokogiri (1.18.9-x86_64-linux-gnu)
-      racc (~> 1.4)
     parallel (1.27.0)
     parser (3.3.9.0)
       ast (~> 2.4.1)
@@ -150,8 +148,7 @@ GEM
     zeitwerk (2.7.3)
 
 PLATFORMS
-  x86_64-darwin-23
-  x86_64-linux
+  x86_64-darwin
 
 DEPENDENCIES
   appraisal (~> 2.4)
@@ -164,4 +161,4 @@ DEPENDENCIES
   sqlite3 (~> 1.4)
 
 BUNDLED WITH
-   2.4.22
+   2.6.7

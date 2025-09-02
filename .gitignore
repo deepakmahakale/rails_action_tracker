@@ -15,3 +15,6 @@
 
 # Claude Code instructions (local only)
 CLAUDE.md
+
+# Gemfile.lock - not needed for gem development, causes version conflicts
+Gemfile.lock
