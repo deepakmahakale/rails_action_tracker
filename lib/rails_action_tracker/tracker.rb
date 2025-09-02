@@ -82,18 +82,18 @@ module RailsActionTracker
 
         return unless (match = sql.match(/(FROM|INTO|UPDATE|INSERT INTO)\s+["']?(\w+)["']?/i))
 
-          table = match[2]
+        table = match[2]
 
-          # Skip ignored tables (case insensitive)
-          ignored_tables = config&.dig(:ignored_tables) || %w[pg_attribute pg_index pg_class pg_namespace
-                                                              pg_type ar_internal_metadata schema_migrations]
-          return if ignored_tables.map(&:downcase).include?(table.downcase)
+        # Skip ignored tables (case insensitive)
+        ignored_tables = config&.dig(:ignored_tables) || %w[pg_attribute pg_index pg_class pg_namespace
+                                                            pg_type ar_internal_metadata schema_migrations]
+        return if ignored_tables.map(&:downcase).include?(table.downcase)
 
-          if sql =~ /\A\s*SELECT/i
-            logs[:read] << table
-          else
-            logs[:write] << table
-          end
+        if sql =~ /\A\s*SELECT/i
+          logs[:read] << table
+        else
+          logs[:write] << table
+        end
       end
 
       def log_message(message)
@@ -129,7 +129,7 @@ module RailsActionTracker
         services_accessed.uniq
       end
 
-      def format_summary(read_models, write_models, services, controller_action = nil, colorize: true)
+      def format_summary(read_models, write_models, services, controller_action = nil, colorize = true)
         if colorize && defined?(Rails) && Rails.logger.respond_to?(:colorize_logging) && Rails.logger.colorize_logging
           # Use Rails default colors when available
           green = defined?(ActiveSupport::LogSubscriber::GREEN) ? ActiveSupport::LogSubscriber::GREEN : "\e[32m"

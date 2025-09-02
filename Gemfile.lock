@@ -72,9 +72,6 @@ GEM
     minitest (5.25.5)
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
-    nokogiri (1.18.9)
-      mini_portile2 (~> 2.8.2)
-      racc (~> 1.4)
     nokogiri (1.18.9-x86_64-darwin)
       racc (~> 1.4)
     parallel (1.27.0)
@@ -151,7 +148,6 @@ GEM
     zeitwerk (2.7.3)
 
 PLATFORMS
-  ruby
   x86_64-darwin-23
 
 DEPENDENCIES
@@ -165,4 +161,4 @@ DEPENDENCIES
   sqlite3 (~> 1.4)
 
 BUNDLED WITH
-   2.6.7
+   2.4.22
