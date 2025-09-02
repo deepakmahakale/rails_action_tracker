@@ -62,7 +62,9 @@ RailsActionTracker::Tracker.configure(
   print_to_rails_log: true,  # Print to Rails logger (default: true)
   write_to_file: false,      # Write to separate file (default: false)
   log_file_path: nil,        # Path to separate log file (required if write_to_file: true)
-  ignored_tables: []         # Tables to ignore from tracking (optional)
+  ignored_tables: [],        # Tables to ignore from tracking (optional)
+  ignored_controllers: [],   # Controllers to completely ignore (optional)
+  ignored_actions: {}        # Specific controller#action combinations to ignore (optional)
 )
 ```
 
@@ -119,7 +121,7 @@ RailsActionTracker::Tracker.configure(
   ignored_tables: [
     'pg_attribute',        # PostgreSQL system tables
     'pg_index',
-    'pg_class', 
+    'pg_class',
     'ar_internal_metadata', # Rails internal tables
     'schema_migrations',
     'audit_logs',          # Your custom tables to ignore
@@ -131,6 +133,33 @@ RailsActionTracker::Tracker.configure(
 **Default ignored tables:**
 - `pg_attribute`, `pg_index`, `pg_class`, `pg_namespace`, `pg_type` (PostgreSQL system tables)
 - `ar_internal_metadata`, `schema_migrations` (Rails internal tables)
+
+### Ignoring Controllers and Actions
+
+You can ignore entire controllers or specific controller#action combinations:
+
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_to_rails_log: true,
+  # Ignore entire controllers (all actions)
+  ignored_controllers: [
+    'Rails::PwaController',  # Ignore PWA controller completely
+    'HealthCheckController'  # Ignore health check controller
+  ],
+
+  # Ignore specific controller#action combinations
+  ignored_actions: {
+    'ApplicationController' => ['ping', 'status'],  # Ignore specific actions
+    'ApiController' => ['heartbeat'],               # Multiple controllers
+    'AdminController' => ['dashboard_stats']        # can have ignored actions
+  }
+)
+```
+
+**Use cases:**
+- Ignore PWA controllers that generate noise: `'Rails::PwaController'`
+- Skip health check endpoints: `'HealthCheckController'`
+- Ignore monitoring/status actions: `{'ApplicationController' => ['ping', 'status']}`
 
 ## Manual Usage
 

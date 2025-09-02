@@ -18,7 +18,9 @@ module RailsActionTracker
           log_file_path: nil,
           services: [],
           ignored_tables: %w[pg_attribute pg_index pg_class pg_namespace pg_type ar_internal_metadata
-                             schema_migrations]
+                             schema_migrations],
+          ignored_controllers: [],
+          ignored_actions: {}
         }.merge(options)
 
         setup_custom_logger if @config[:write_to_file] && @config[:log_file_path]
@@ -49,6 +51,9 @@ module RailsActionTracker
         logs = Thread.current[THREAD_KEY]
         return unless logs
 
+        # Check if this controller/action should be ignored
+        return if should_ignore_controller_action?(logs[:controller], logs[:action])
+
         services_accessed = detect_services(logs[:captured_logs])
         read_models = logs[:read].to_a.uniq.sort
         write_models = logs[:write].to_a.uniq.sort
@@ -63,6 +68,21 @@ module RailsActionTracker
       end
 
       private
+
+      def should_ignore_controller_action?(controller, action)
+        return false unless config && controller && action
+
+        # Check if entire controller is ignored
+        ignored_controllers = config[:ignored_controllers] || []
+        return true if ignored_controllers.include?(controller)
+
+        # Check if specific controller#action combination is ignored
+        ignored_actions = config[:ignored_actions] || {}
+        controller_actions = ignored_actions[controller] || []
+        return true if controller_actions.include?(action)
+
+        false
+      end
 
       def setup_custom_logger
         return unless config[:log_file_path]
@@ -153,16 +173,24 @@ module RailsActionTracker
         write_models += [''] * (max_rows - write_models.size)
         services += [''] * (max_rows - services.size)
 
+        # Calculate dynamic column widths
+        read_width = [read_models.map(&:length).max || 0, 'Models Read'.length].max
+        write_width = [write_models.map(&:length).max || 0, 'Models Written'.length].max
+        services_width = [services.map(&:length).max || 0, 'Services Accessed'.length].max
+
+        # Create separator line
+        separator = "+#{'-' * (read_width + 2)}+#{'-' * (write_width + 2)}+#{'-' * (services_width + 2)}+"
+
         header = controller_action ? "#{yellow}#{controller_action}#{reset} - " : ''
         table = "#{header}Models and Services accessed during request:\n"
-        table += "+-----------------------+-----------------------+-----------------------+\n"
-        table += "| #{green}Models Read           #{reset} | #{red}Models Written         #{reset} | " \
-                 "#{blue}Services Accessed       #{reset} |\n"
-        table += "+-----------------------+-----------------------+-----------------------+\n"
+        table += "#{separator}\n"
+        table += "| #{green}#{'Models Read'.ljust(read_width)}#{reset} | #{red}#{'Models Written'.ljust(write_width)}#{reset} | " \
+                 "#{blue}#{'Services Accessed'.ljust(services_width)}#{reset} |\n"
+        table += "#{separator}\n"
         max_rows.times do |i|
-          table += "| #{read_models[i].ljust(21)} | #{write_models[i].ljust(21)} | #{services[i].ljust(21)} |\n"
+          table += "| #{read_models[i].ljust(read_width)} | #{write_models[i].ljust(write_width)} | #{services[i].ljust(services_width)} |\n"
         end
-        table += "+-----------------------+-----------------------+-----------------------+\n"
+        table += "#{separator}\n"
         table
       end
       # rubocop:enable Style/OptionalBooleanParameter
