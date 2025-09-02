@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 # RailsActionTracker Configuration
-# 
+#
 # This gem tracks ActiveRecord model operations and service usage during Rails action calls.
 
 RailsActionTracker::Tracker.configure(
@@ -15,13 +17,13 @@ RailsActionTracker::Tracker.configure(
   # Custom service detection patterns (optional)
   # You can define custom services to track beyond the defaults
   services: [
-    { name: "Redis", pattern: /redis/i },
-    { name: "Sidekiq", pattern: /sidekiq/i },
-    { name: "Pusher", pattern: /pusher/i },
-    { name: "Honeybadger", pattern: /honeybadger/i },
-    { name: "ActionMailer", pattern: /mail|email/i },
-    { name: "HTTP", pattern: /http|api/i },
-    { name: "Elasticsearch", pattern: /elasticsearch/i },
+    { name: 'Redis', pattern: /redis/i },
+    { name: 'Sidekiq', pattern: /sidekiq/i },
+    { name: 'Pusher', pattern: /pusher/i },
+    { name: 'Honeybadger', pattern: /honeybadger/i },
+    { name: 'ActionMailer', pattern: /mail|email/i },
+    { name: 'HTTP', pattern: /http|api/i },
+    { name: 'Elasticsearch', pattern: /elasticsearch/i }
     # Add your custom services here
     # { name: "CustomService", pattern: /custom_pattern/i },
   ],
@@ -29,13 +31,13 @@ RailsActionTracker::Tracker.configure(
   # Tables to ignore during tracking (optional)
   # These tables will not appear in the tracking output
   ignored_tables: [
-    'pg_attribute',        # PostgreSQL system table
-    'pg_index',           # PostgreSQL system table  
+    'pg_attribute', # PostgreSQL system table
+    'pg_index',           # PostgreSQL system table
     'pg_class',           # PostgreSQL system table
     'pg_namespace',       # PostgreSQL system table
     'pg_type',            # PostgreSQL system table
     'ar_internal_metadata', # Rails internal table
-    'schema_migrations',   # Rails migrations table
+    'schema_migrations' # Rails migrations table
     # Add your custom ignored tables here
     # 'audit_logs',
     # 'session_data'

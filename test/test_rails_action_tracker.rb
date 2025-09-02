@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require 'test_helper'
 
 class TestRailsActionTracker < Minitest::Test
   def test_that_it_has_a_version_number
@@ -16,7 +16,7 @@ class TestRailsActionTracker < Minitest::Test
   def test_tracker_responds_to_main_methods
     tracker = RailsActionTracker::Tracker
     assert_respond_to tracker, :configure
-    assert_respond_to tracker, :start_tracking  
+    assert_respond_to tracker, :start_tracking
     assert_respond_to tracker, :stop_tracking
     assert_respond_to tracker, :print_summary
   end

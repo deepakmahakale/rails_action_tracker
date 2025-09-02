@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'set'
 require 'logger'
 require 'fileutils'
@@ -15,7 +17,8 @@ module RailsActionTracker
           write_to_file: false,
           log_file_path: nil,
           services: [],
-          ignored_tables: ['pg_attribute', 'pg_index', 'pg_class', 'pg_namespace', 'pg_type', 'ar_internal_metadata', 'schema_migrations']
+          ignored_tables: %w[pg_attribute pg_index pg_class pg_namespace pg_type ar_internal_metadata
+                             schema_migrations]
         }.merge(options)
 
         setup_custom_logger if @config[:write_to_file] && @config[:log_file_path]
@@ -36,7 +39,8 @@ module RailsActionTracker
       def stop_tracking
         unsubscribe_from_sql_notifications
         unsubscribe_from_logger
-        logs = Thread.current[THREAD_KEY] || { read: Set.new, write: Set.new, captured_logs: [], controller: nil, action: nil }
+        logs = Thread.current[THREAD_KEY] || { read: Set.new, write: Set.new, captured_logs: [], controller: nil,
+                                               action: nil }
         Thread.current[THREAD_KEY] = nil
         logs
       end
@@ -50,11 +54,11 @@ module RailsActionTracker
         write_models = logs[:write].to_a.uniq.sort
 
         controller_action = "#{logs[:controller]}##{logs[:action]}" if logs[:controller] && logs[:action]
-        
+
         # Generate outputs with and without colors
         colored_output = format_summary(read_models, write_models, services_accessed, controller_action, true)
         plain_output = format_summary(read_models, write_models, services_accessed, controller_action, false)
-        
+
         log_output(colored_output, plain_output)
       end
 
@@ -67,7 +71,7 @@ module RailsActionTracker
         FileUtils.mkdir_p(log_dir) unless Dir.exist?(log_dir)
 
         @custom_logger = Logger.new(config[:log_file_path])
-        @custom_logger.formatter = proc do |severity, datetime, progname, msg|
+        @custom_logger.formatter = proc do |severity, datetime, _progname, msg|
           "[#{datetime.strftime('%Y-%m-%d %H:%M:%S')}] #{severity}: #{msg}\n"
         end
       end
@@ -76,13 +80,14 @@ module RailsActionTracker
         logs = Thread.current[THREAD_KEY]
         return unless logs
 
-        if match = sql.match(/(FROM|INTO|UPDATE|INSERT INTO)\s+["']?(\w+)["']?/i)
+        if (match = sql.match(/(FROM|INTO|UPDATE|INSERT INTO)\s+["']?(\w+)["']?/i))
           table = match[2]
-          
+
           # Skip ignored tables (case insensitive)
-          ignored_tables = config&.dig(:ignored_tables) || ['pg_attribute', 'pg_index', 'pg_class', 'pg_namespace', 'pg_type', 'ar_internal_metadata', 'schema_migrations']
+          ignored_tables = config&.dig(:ignored_tables) || %w[pg_attribute pg_index pg_class pg_namespace
+                                                              pg_type ar_internal_metadata schema_migrations]
           return if ignored_tables.map(&:downcase).include?(table.downcase)
-          
+
           if sql =~ /\A\s*SELECT/i
             logs[:read] << table
           else
@@ -94,18 +99,19 @@ module RailsActionTracker
       def log_message(message)
         logs = Thread.current[THREAD_KEY]
         return unless logs
+
         logs[:captured_logs] << message
       end
 
       def detect_services(captured_logs)
         services_accessed = []
         default_service_patterns = [
-          { name: "Pusher", pattern: /pusher/i },
-          { name: "Honeybadger", pattern: /honeybadger/i },
-          { name: "Redis", pattern: /redis/i },
-          { name: "Sidekiq", pattern: /sidekiq/i },
-          { name: "ActionMailer", pattern: /mail|email/i },
-          { name: "HTTP", pattern: /http|api/i }
+          { name: 'Pusher', pattern: /pusher/i },
+          { name: 'Honeybadger', pattern: /honeybadger/i },
+          { name: 'Redis', pattern: /redis/i },
+          { name: 'Sidekiq', pattern: /sidekiq/i },
+          { name: 'ActionMailer', pattern: /mail|email/i },
+          { name: 'HTTP', pattern: /http|api/i }
         ]
 
         service_patterns = config&.dig(:services) || default_service_patterns
@@ -113,13 +119,9 @@ module RailsActionTracker
         captured_logs.each do |line|
           service_patterns.each do |service_config|
             if service_config.is_a?(Hash)
-              if line.match?(service_config[:pattern])
-                services_accessed << service_config[:name]
-              end
+              services_accessed << service_config[:name] if line.match?(service_config[:pattern])
             elsif service_config.is_a?(String)
-              if line.downcase.include?(service_config.downcase)
-                services_accessed << service_config
-              end
+              services_accessed << service_config if line.downcase.include?(service_config.downcase)
             end
           end
         end
@@ -127,33 +129,34 @@ module RailsActionTracker
         services_accessed.uniq
       end
 
-      def format_summary(read_models, write_models, services, controller_action = nil, colorize = true)
+      def format_summary(read_models, write_models, services, controller_action = nil, colorize: true)
         if colorize && defined?(Rails) && Rails.logger.respond_to?(:colorize_logging) && Rails.logger.colorize_logging
           # Use Rails default colors when available
           green = defined?(ActiveSupport::LogSubscriber::GREEN) ? ActiveSupport::LogSubscriber::GREEN : "\e[32m"
-          red = defined?(ActiveSupport::LogSubscriber::RED) ? ActiveSupport::LogSubscriber::RED : "\e[31m"  
+          red = defined?(ActiveSupport::LogSubscriber::RED) ? ActiveSupport::LogSubscriber::RED : "\e[31m"
           blue = defined?(ActiveSupport::LogSubscriber::BLUE) ? ActiveSupport::LogSubscriber::BLUE : "\e[34m"
           yellow = defined?(ActiveSupport::LogSubscriber::YELLOW) ? ActiveSupport::LogSubscriber::YELLOW : "\e[33m"
           reset = defined?(ActiveSupport::LogSubscriber::CLEAR) ? ActiveSupport::LogSubscriber::CLEAR : "\e[0m"
         else
-          green = red = blue = yellow = reset = ""
+          green = red = blue = yellow = reset = ''
         end
 
         max_rows = [read_models.size, write_models.size, services.size].max
-        
-        if max_rows == 0
-          header = controller_action ? "#{yellow}#{controller_action}#{reset}: " : ""
+
+        if max_rows.zero?
+          header = controller_action ? "#{yellow}#{controller_action}#{reset}: " : ''
           return "#{header}No models or services accessed during this request.\n"
         end
 
-        read_models += [""] * (max_rows - read_models.size)
-        write_models += [""] * (max_rows - write_models.size)
-        services += [""] * (max_rows - services.size)
+        read_models += [''] * (max_rows - read_models.size)
+        write_models += [''] * (max_rows - write_models.size)
+        services += [''] * (max_rows - services.size)
 
-        header = controller_action ? "#{yellow}#{controller_action}#{reset} - " : ""
+        header = controller_action ? "#{yellow}#{controller_action}#{reset} - " : ''
         table = "#{header}Models and Services accessed during request:\n"
         table += "+-----------------------+-----------------------+-----------------------+\n"
-        table += "| #{green}Models Read           #{reset} | #{red}Models Written         #{reset} | #{blue}Services Accessed       #{reset} |\n"
+        table += "| #{green}Models Read           #{reset} | #{red}Models Written         #{reset} | " \
+                 "#{blue}Services Accessed       #{reset} |\n"
         table += "+-----------------------+-----------------------+-----------------------+\n"
         max_rows.times do |i|
           table += "| #{read_models[i].ljust(21)} | #{write_models[i].ljust(21)} | #{services[i].ljust(21)} |\n"
@@ -166,20 +169,17 @@ module RailsActionTracker
         if config.nil?
           Rails.logger.info "\n#{colored_output}" if defined?(Rails)
         else
-          if config[:print_to_rails_log] && defined?(Rails)
-            Rails.logger.info "\n#{colored_output}"
-          end
+          Rails.logger.info "\n#{colored_output}" if config[:print_to_rails_log] && defined?(Rails)
 
-          if config[:write_to_file] && custom_logger
-            custom_logger.info "\n#{plain_output}"
-          end
+          custom_logger.info "\n#{plain_output}" if config[:write_to_file] && custom_logger
         end
       end
 
       def subscribe_to_sql_notifications
-        @sql_subscriber ||= ActiveSupport::Notifications.subscribe("sql.active_record") do |_name, _start, _finish, _id, payload|
+        @subscribe_to_sql_notifications ||= ActiveSupport::Notifications
+                                            .subscribe('sql.active_record') do |_name, _start, _finish, _id, payload|
           sql = payload[:sql]
-          log_query(sql) unless sql.include?("SCHEMA")
+          log_query(sql) unless sql.include?('SCHEMA')
         end
       end
 
@@ -190,28 +190,28 @@ module RailsActionTracker
 
       def subscribe_to_logger
         return unless defined?(Rails)
-        
-        @logger_subscriber ||= ActiveSupport::Notifications.subscribe(/.*/) do |name, _start, _finish, _id, payload|
-          next if name.include?("sql.active_record")
-          
+
+        @subscribe_to_logger ||= ActiveSupport::Notifications.subscribe(/.*/) do |name, _start, _finish, _id, payload|
+          next if name.include?('sql.active_record')
+
           # Capture controller and action information
-          if name == "process_action.action_controller"
+          if name == 'process_action.action_controller'
             logs = Thread.current[THREAD_KEY]
             if logs
               logs[:controller] = payload[:controller]
               logs[:action] = payload[:action]
             end
           end
-          
+
           message = case name
-                    when "process_action.action_controller"
+                    when 'process_action.action_controller'
                       "Controller: #{payload[:controller]}##{payload[:action]}"
-                    when "render_template.action_view"
+                    when 'render_template.action_view'
                       "Template: #{payload[:identifier]}"
                     else
                       payload.to_s
                     end
-          
+
           log_message(message) if message && !message.empty?
         end
       end

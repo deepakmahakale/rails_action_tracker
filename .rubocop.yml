@@ -1,8 +1,59 @@
 AllCops:
-  TargetRubyVersion: 3.1
+  SuggestExtensions: false
+  TargetRubyVersion: 2.7
 
 Style/StringLiterals:
-  EnforcedStyle: double_quotes
+  EnforcedStyle: single_quotes
 
 Style/StringLiteralsInInterpolation:
-  EnforcedStyle: double_quotes
+  EnforcedStyle: single_quotes
+
+# We want consistent documentation but not strict
+Style/Documentation:
+  Enabled: false
+
+# Allow long lines in some contexts
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'Rakefile'
+    - '**/*.gemspec'
+
+# Disable some metrics that are too strict for test files
+Metrics/BlockLength:
+  Exclude:
+    - 'test/**/*'
+    - 'spec/**/*'
+    - '**/*.gemspec'
+
+Metrics/MethodLength:
+  Exclude:
+    - 'test/**/*'
+    - 'spec/**/*'
+
+# Allow multiple classes in one file for test helpers
+Style/ClassAndModuleChildren:
+  Enabled: false
+
+# Reasonable limits for a gem project
+Metrics/ClassLength:
+  Max: 200
+
+Metrics/MethodLength:
+  Max: 30
+  Exclude:
+    - 'test/**/*'
+    - 'spec/**/*'
+
+Metrics/CyclomaticComplexity:
+  Max: 15
+
+Metrics/PerceivedComplexity:
+  Max: 15
+
+# Disable complex assignment checks in tests
+Metrics/AbcSize:
+  Max: 40
+  Exclude:
+    - 'test/**/*'
+    - 'spec/**/*'
