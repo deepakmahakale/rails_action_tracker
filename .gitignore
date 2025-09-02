@@ -12,3 +12,6 @@
 
 # Appraisal generated files
 /gemfiles/
+
+# Claude Code instructions (local only)
+CLAUDE.md
