@@ -24,7 +24,9 @@ module RailsActionTracker
         Thread.current[THREAD_KEY] = {
           read: Set.new,
           write: Set.new,
-          captured_logs: []
+          captured_logs: [],
+          controller: nil,
+          action: nil
         }
         subscribe_to_sql_notifications
         subscribe_to_logger
@@ -33,7 +35,7 @@ module RailsActionTracker
       def stop_tracking
         unsubscribe_from_sql_notifications
         unsubscribe_from_logger
-        logs = Thread.current[THREAD_KEY] || { read: Set.new, write: Set.new, captured_logs: [] }
+        logs = Thread.current[THREAD_KEY] || { read: Set.new, write: Set.new, captured_logs: [], controller: nil, action: nil }
         Thread.current[THREAD_KEY] = nil
         logs
       end
@@ -46,7 +48,8 @@ module RailsActionTracker
         read_models = logs[:read].to_a.uniq.sort
         write_models = logs[:write].to_a.uniq.sort
 
-        output = format_summary(read_models, write_models, services_accessed)
+        controller_action = "#{logs[:controller]}##{logs[:action]}" if logs[:controller] && logs[:action]
+        output = format_summary(read_models, write_models, services_accessed, controller_action)
         
         log_output(output)
       end
@@ -115,20 +118,26 @@ module RailsActionTracker
         services_accessed.uniq
       end
 
-      def format_summary(read_models, write_models, services)
+      def format_summary(read_models, write_models, services, controller_action = nil)
         green = "\e[32m"
         red = "\e[31m"
         blue = "\e[34m"
+        yellow = "\e[33m"
         reset = "\e[0m"
 
         max_rows = [read_models.size, write_models.size, services.size].max
-        return "No models or services accessed during this request.\n" if max_rows == 0
+        
+        if max_rows == 0
+          header = controller_action ? "#{yellow}#{controller_action}#{reset}: " : ""
+          return "#{header}No models or services accessed during this request.\n"
+        end
 
         read_models += [""] * (max_rows - read_models.size)
         write_models += [""] * (max_rows - write_models.size)
         services += [""] * (max_rows - services.size)
 
-        table = "Models and Services accessed during request:\n"
+        header = controller_action ? "#{yellow}#{controller_action}#{reset} - " : ""
+        table = "#{header}Models and Services accessed during request:\n"
         table += "+-----------------------+-----------------------+-----------------------+\n"
         table += "| #{green}Models Read           #{reset} | #{red}Models Written         #{reset} | #{blue}Services Accessed       #{reset} |\n"
         table += "+-----------------------+-----------------------+-----------------------+\n"
@@ -170,6 +179,15 @@ module RailsActionTracker
         
         @logger_subscriber ||= ActiveSupport::Notifications.subscribe(/.*/) do |name, _start, _finish, _id, payload|
           next if name.include?("sql.active_record")
+          
+          # Capture controller and action information
+          if name == "process_action.action_controller"
+            logs = Thread.current[THREAD_KEY]
+            if logs
+              logs[:controller] = payload[:controller]
+              logs[:action] = payload[:action]
+            end
+          end
           
           message = case name
                     when "process_action.action_controller"
