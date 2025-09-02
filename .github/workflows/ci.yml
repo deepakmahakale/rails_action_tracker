@@ -25,32 +25,22 @@ jobs:
           - 'rails-8.0'
         exclude:
           # Rails 5.x doesn't support Ruby 3.0+
-          - ruby-version: '3.0'
-            rails-version: 'rails-5.0'
-          - ruby-version: '3.0'
-            rails-version: 'rails-5.1'
-          - ruby-version: '3.0'
-            rails-version: 'rails-5.2'
-          - ruby-version: '3.1'
-            rails-version: 'rails-5.0'
-          - ruby-version: '3.1'
-            rails-version: 'rails-5.1'
-          - ruby-version: '3.1'
-            rails-version: 'rails-5.2'
-          - ruby-version: '3.4'
-            rails-version: 'rails-5.0'
-          - ruby-version: '3.4'
-            rails-version: 'rails-5.1'
-          - ruby-version: '3.4'
-            rails-version: 'rails-5.2'
+          - { ruby-version: '3.0', rails-version: 'rails-5.0' }
+          - { ruby-version: '3.0', rails-version: 'rails-5.1' }
+          - { ruby-version: '3.0', rails-version: 'rails-5.2' }
+          - { ruby-version: '3.1', rails-version: 'rails-5.0' }
+          - { ruby-version: '3.1', rails-version: 'rails-5.1' }
+          - { ruby-version: '3.1', rails-version: 'rails-5.2' }
+          - { ruby-version: '3.4', rails-version: 'rails-5.0' }
+          - { ruby-version: '3.4', rails-version: 'rails-5.1' }
+          - { ruby-version: '3.4', rails-version: 'rails-5.2' }
           # Rails 6.0 doesn't support Ruby 3.1+
-          - ruby-version: '3.1'
-            rails-version: 'rails-6.0'
-          - ruby-version: '3.4'
-            rails-version: 'rails-6.0'
+          - { ruby-version: '3.1', rails-version: 'rails-6.0' }
+          - { ruby-version: '3.4', rails-version: 'rails-6.0' }
           # Rails 8.0 doesn't support Ruby 2.7
-          - ruby-version: '2.7'
-            rails-version: 'rails-8.0'
+          - { ruby-version: '2.7', rails-version: 'rails-8.0' }
+          # Rails 7.1 has compatibility issues with Ruby 3.4
+          - { ruby-version: '3.4', rails-version: 'rails-7.1' }
 
     name: Ruby ${{ matrix.ruby-version }} - ${{ matrix.rails-version }}
     
@@ -79,7 +69,7 @@ jobs:
     - name: Install dependencies
       run: |
         # Install appropriate Bundler version for Ruby compatibility
-        if [[ "${{ matrix.ruby-version }}" == "2.7" || "${{ matrix.ruby-version }}" == "3.0" ]]; then
+        if [[ "${{ matrix.ruby-version }}" == "2.7" ]] || [[ "${{ matrix.ruby-version }}" == "3.0" ]]; then
           gem install bundler -v "~> 2.4.0"
         else
           gem install bundler
@@ -95,7 +85,7 @@ jobs:
 
     - name: Run RuboCop
       run: bundle exec rubocop --parallel
-      if: matrix.ruby-version == '3.4' && matrix.rails-version == 'rails-7.1'
+      if: matrix.ruby-version == '3.4' && matrix.rails-version == 'rails-7.0'
 
   # Separate job for testing without specific Rails version (latest)
   test-latest:
