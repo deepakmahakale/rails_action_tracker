@@ -33,9 +33,8 @@ jobs:
         path: |
           vendor/bundle
           gemfiles/vendor/bundle
-        key: ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-${{ hashFiles('**/Gemfile.lock', 'gemfiles/*.gemfile.lock') }}
+        key: ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ hashFiles('**/Gemfile.lock', 'gemfiles/*.gemfile.lock', 'Appraisals') }}
         restore-keys: |
-          ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-
           ${{ runner.os }}-gems-
 
@@ -48,7 +47,7 @@ jobs:
           gem install bundler
         fi
         bundle config path vendor/bundle
-        bundle install --jobs 4 --retry 3
+        bundle install --jobs 4 --retry 3 --without development
 
     - name: Generate Appraisal gemfiles
       run: bundle exec appraisal install
@@ -70,10 +69,6 @@ jobs:
             bundle exec appraisal rails-6.1,rails-7.0,rails-8.0 rake test
             ;;
         esac
-
-    - name: Run RuboCop
-      run: bundle exec rubocop --parallel
-      if: matrix.ruby-version == '3.4'
 
     - name: Check gem build
       run: gem build rails_action_tracker.gemspec
@@ -99,6 +94,11 @@ jobs:
         gem install bundler-audit
         bundle audit --update
       continue-on-error: true
+
+    - name: Install development dependencies
+      run: |
+        bundle config path vendor/bundle
+        bundle install --jobs 4 --retry 3 --with development
 
     - name: Run RuboCop
       run: bundle exec rubocop --parallel --format github

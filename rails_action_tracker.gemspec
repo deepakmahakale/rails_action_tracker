@@ -36,11 +36,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'activesupport', '>= 5.0'
   spec.add_dependency 'railties', '>= 5.0' # For Rails::Railtie
 
-  # Development dependencies
-  spec.add_development_dependency 'appraisal', '~> 2.4'
-  spec.add_development_dependency 'minitest', '~> 5.0'
-  spec.add_development_dependency 'mocha', '~> 2.0'
-  spec.add_development_dependency 'sqlite3', '~> 1.4'
+  # Development dependencies moved to Gemfile groups for better CI optimization
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
