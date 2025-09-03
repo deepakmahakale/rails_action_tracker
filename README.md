@@ -531,7 +531,11 @@ This gem is tested and compatible with:
 
 **Ruby Versions:** 2.7.x, 3.0.x, 3.1.x, 3.4.x
 
-**Rails Versions:** 5.0+ through 8.0+ (see our CI for the full compatibility matrix)
+**Rails Versions:** 5.0+ through 7.1+ (see our CI for the full compatibility matrix)
+
+**Currently Tested Combinations:**
+- Ruby 2.7.x with Rails 6.0, 6.1, 7.0, 7.1
+- Ruby 3.0.x with Rails 6.0, 6.1, 7.0, 7.1
 
 ## Contributing
 

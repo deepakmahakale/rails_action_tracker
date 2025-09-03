@@ -13,8 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby-version: ['2.7']
-        rails-version: ['rails-6.0', 'rails-6.1']
+        ruby-version: ['2.7', '3.0']
+        rails-version: ['rails-6.0', 'rails-6.1', 'rails-7.0', 'rails-7.1']
 
     name: Ruby ${{ matrix.ruby-version }} - ${{ matrix.rails-version }}
     
@@ -54,7 +54,7 @@ jobs:
 
     - name: Check gem build
       run: gem build rails_action_tracker.gemspec
-      if: matrix.ruby-version == '2.7' && matrix.rails-version == 'rails-6.1'
+      if: matrix.ruby-version == '3.0' && matrix.rails-version == 'rails-7.1'
 
   # Security and quality checks
   security:
