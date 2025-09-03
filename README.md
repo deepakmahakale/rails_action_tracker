@@ -41,7 +41,7 @@ RailsActionTracker::Tracker.configure(
   write_to_file: false,      # Write to separate file (default: false)
   log_file_path: Rails.root.join('log', 'action_tracker.log'),
 
-  # Output format controls (new in v2.0+)
+  # Output format controls (new in v0.2.0+)
   print_format: :table,      # Format for console/Rails log: :table, :csv, :json
   log_format: :table,        # Format for log file: :table, :csv, :json
 
@@ -59,7 +59,7 @@ RailsActionTracker::Tracker.configure(
 
 ### Output Formats
 
-**🎨 New in v2.0+**: The gem now supports different output formats and allows you to configure separate formats for console output and file logging.
+**🎨 New in v0.2.0+**: The gem now supports different output formats and allows you to configure separate formats for console output and file logging.
 
 #### Available Formats
 
