@@ -65,44 +65,11 @@ module RailsActionTracker
       def print_summary
         logs = Thread.current[THREAD_KEY]
         return unless logs
-
-        # Check if this controller/action should be ignored
         return if should_ignore_controller_action?(logs[:controller], logs[:action])
 
-        services_accessed = detect_services(logs[:captured_logs])
-        read_models = logs[:read].to_a.uniq.sort
-        write_models = logs[:write].to_a.uniq.sort
-
-        controller_action = "#{logs[:controller]}##{logs[:action]}" if logs[:controller] && logs[:action]
-
-        # Generate outputs based on configured formats
-        print_format = config&.dig(:print_format) || :table
-        log_format = config&.dig(:log_format) || print_format
-
-        # Generate print output
-        print_colored_output, print_plain_output = generate_format_output(
-          print_format, read_models, write_models, services_accessed, controller_action, true
-        )
-
-        # Log print output to Rails log if enabled
-        log_output(print_colored_output, print_plain_output) if config&.dig(:print_to_rails_log)
-
-        # Generate log file output if file logging is enabled
-        return unless config&.dig(:write_to_file) && config[:log_file_path]
-
-        if log_format == :json
-          # For JSON log format, accumulate data directly to file
-          accumulate_json_data(read_models, write_models, services_accessed, controller_action)
-        elsif log_format == :csv
-          # For CSV log format, accumulate data directly to file
-          accumulate_csv_data(read_models, write_models, services_accessed, controller_action)
-        else
-          # For other log formats, generate output and write to custom logger
-          _, log_plain_output = generate_format_output(
-            log_format, read_models, write_models, services_accessed, controller_action, false
-          )
-          custom_logger&.info(log_plain_output)
-        end
+        summary_data = prepare_summary_data(logs)
+        handle_print_output(summary_data)
+        handle_log_file_output(summary_data)
       end
 
       private
@@ -195,6 +162,59 @@ module RailsActionTracker
         end
 
         services_accessed.uniq
+      end
+
+      def prepare_summary_data(logs)
+        services_accessed = detect_services(logs[:captured_logs])
+        read_models = logs[:read].to_a.uniq.sort
+        write_models = logs[:write].to_a.uniq.sort
+        controller_action = "#{logs[:controller]}##{logs[:action]}" if logs[:controller] && logs[:action]
+
+        {
+          read_models: read_models,
+          write_models: write_models,
+          services_accessed: services_accessed,
+          controller_action: controller_action
+        }
+      end
+
+      def handle_print_output(summary_data)
+        return unless config&.dig(:print_to_rails_log)
+
+        print_format = config&.dig(:print_format) || :table
+        print_colored_output, print_plain_output = generate_format_output(
+          print_format, summary_data, true
+        )
+        log_output(print_colored_output, print_plain_output)
+      end
+
+      def handle_log_file_output(summary_data)
+        return unless config&.dig(:write_to_file) && config[:log_file_path]
+
+        log_format = config&.dig(:log_format) || config&.dig(:print_format) || :table
+        process_log_file_format(log_format, summary_data)
+      end
+
+      def process_log_file_format(log_format, summary_data)
+        case log_format
+        when :json
+          accumulate_json_data(
+            summary_data[:read_models],
+            summary_data[:write_models],
+            summary_data[:services_accessed],
+            summary_data[:controller_action]
+          )
+        when :csv
+          accumulate_csv_data(
+            summary_data[:read_models],
+            summary_data[:write_models],
+            summary_data[:services_accessed],
+            summary_data[:controller_action]
+          )
+        else
+          _, log_plain_output = generate_format_output(log_format, summary_data, false)
+          custom_logger&.info(log_plain_output)
+        end
       end
 
       # rubocop:disable Style/OptionalBooleanParameter
@@ -321,7 +341,12 @@ module RailsActionTracker
         csv_output
       end
 
-      def generate_format_output(format, read_models, write_models, services, controller_action, colorize)
+      def generate_format_output(format, summary_data, colorize)
+        read_models = summary_data[:read_models]
+        write_models = summary_data[:write_models]
+        services = summary_data[:services_accessed]
+        controller_action = summary_data[:controller_action]
+
         case format
         when :csv
           output = format_csv_print_summary(read_models, write_models, services, controller_action)
@@ -599,53 +624,59 @@ module RailsActionTracker
       end
 
       def merge_csv_action_data(existing_data, action_name, read_models, write_models, services)
-        new_read_models = (read_models || []).uniq.sort
-        new_write_models = (write_models || []).uniq.sort
-        new_services = (services || []).uniq.sort
-
-        # Get all unique table and service names across all data
-        all_tables = (new_read_models + new_write_models).uniq.sort
-        all_services = new_services.uniq.sort
-
-        # Merge with existing table/service names from headers
-        existing_headers = existing_data[:headers] || ['Action']
-        existing_table_service_names = existing_headers[1..] || []
-
-        # Combine all unique names
-        all_combined = (all_tables + all_services + existing_table_service_names).uniq.sort
+        cleaned_data = sanitize_csv_inputs(read_models, write_models, services)
+        all_combined = build_combined_headers(existing_data, cleaned_data)
         new_headers = ['Action'] + all_combined
 
-        # If action already exists, merge the data
         if existing_data[:rows][action_name]
-          existing_row = existing_data[:rows][action_name]
-
-          # Merge table access patterns
-          all_combined.each do |name|
-            if all_tables.include?(name)
-              current_value = existing_row[name] || '-'
-              new_value = determine_table_access(name, new_read_models, new_write_models)
-              existing_row[name] = merge_table_access(current_value, new_value)
-            elsif all_services.include?(name)
-              existing_row[name] = 'Y' # Service was accessed
-            end
-          end
+          merge_existing_csv_row(existing_data[:rows][action_name], all_combined, cleaned_data)
         else
-          # Create new row for this action
-          new_row = { 'Action' => action_name }
-          all_combined.each do |name|
-            new_row[name] = if all_tables.include?(name)
-                              determine_table_access(name, new_read_models, new_write_models)
-                            elsif all_services.include?(name)
-                              'Y'
-                            else
-                              '-'
-                            end
-          end
-          existing_data[:rows][action_name] = new_row
+          existing_data[:rows][action_name] = create_new_csv_row(action_name, all_combined, cleaned_data)
         end
 
         existing_data[:headers] = new_headers
         existing_data
+      end
+
+      def sanitize_csv_inputs(read_models, write_models, services)
+        {
+          read_models: (read_models || []).uniq.sort,
+          write_models: (write_models || []).uniq.sort,
+          services: (services || []).uniq.sort,
+          all_tables: ((read_models || []) + (write_models || [])).uniq.sort
+        }
+      end
+
+      def build_combined_headers(existing_data, cleaned_data)
+        existing_headers = existing_data[:headers] || ['Action']
+        existing_names = existing_headers[1..] || []
+        (cleaned_data[:all_tables] + cleaned_data[:services] + existing_names).uniq.sort
+      end
+
+      def merge_existing_csv_row(existing_row, all_combined, cleaned_data)
+        all_combined.each do |name|
+          if cleaned_data[:all_tables].include?(name)
+            current_value = existing_row[name] || '-'
+            new_value = determine_table_access(name, cleaned_data[:read_models], cleaned_data[:write_models])
+            existing_row[name] = merge_table_access(current_value, new_value)
+          elsif cleaned_data[:services].include?(name)
+            existing_row[name] = 'Y'
+          end
+        end
+      end
+
+      def create_new_csv_row(action_name, all_combined, cleaned_data)
+        new_row = { 'Action' => action_name }
+        all_combined.each do |name|
+          new_row[name] = if cleaned_data[:all_tables].include?(name)
+                            determine_table_access(name, cleaned_data[:read_models], cleaned_data[:write_models])
+                          elsif cleaned_data[:services].include?(name)
+                            'Y'
+                          else
+                            '-'
+                          end
+        end
+        new_row
       end
 
       def determine_table_access(table_name, read_models, write_models)

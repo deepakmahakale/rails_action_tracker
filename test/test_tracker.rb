@@ -366,8 +366,15 @@ class TestTracker < Minitest::Test
     services = ['Redis']
     controller_action = 'UsersController#show'
 
+    summary_data = {
+      read_models: read_models,
+      write_models: write_models,
+      services_accessed: services,
+      controller_action: controller_action
+    }
+
     colored_output, plain_output = @tracker.send(
-      :generate_format_output, :table, read_models, write_models, services, controller_action, true
+      :generate_format_output, :table, summary_data, true
     )
 
     assert_includes colored_output, 'UsersController#show'
@@ -382,8 +389,15 @@ class TestTracker < Minitest::Test
     services = ['Redis']
     controller_action = 'UsersController#show'
 
+    summary_data = {
+      read_models: read_models,
+      write_models: write_models,
+      services_accessed: services,
+      controller_action: controller_action
+    }
+
     colored_output, plain_output = @tracker.send(
-      :generate_format_output, :csv, read_models, write_models, services, controller_action, true
+      :generate_format_output, :csv, summary_data, true
     )
 
     assert_equal colored_output, plain_output
@@ -397,8 +411,15 @@ class TestTracker < Minitest::Test
     services = ['Redis']
     controller_action = 'UsersController#show'
 
+    summary_data = {
+      read_models: read_models,
+      write_models: write_models,
+      services_accessed: services,
+      controller_action: controller_action
+    }
+
     colored_output, plain_output = @tracker.send(
-      :generate_format_output, :json, read_models, write_models, services, controller_action, true
+      :generate_format_output, :json, summary_data, true
     )
 
     assert_equal colored_output, plain_output
