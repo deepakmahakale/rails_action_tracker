@@ -228,7 +228,8 @@ RailsActionTracker::Tracker.configure(
   log_file_path: Rails.root.join('log', 'action_tracker.csv')
 )
 ```
-# Results in accumulated CSV like:
+
+**Results in accumulated CSV like:**
 
 | Action | Redis | Sidekiq | posts | profiles | users |
 | :-- | :-- | :-- | :-- | :-- | :-- |
