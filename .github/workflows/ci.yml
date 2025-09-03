@@ -35,7 +35,7 @@ jobs:
         path: |
           vendor/bundle
           gemfiles/vendor/bundle
-        key: ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-${{ hashFiles('Gemfile', 'gemfiles/*.gemfile.lock', 'Appraisals') }}
+        key: ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-${{ hashFiles('Gemfile', 'gemfiles/${{ matrix.rails-version }}.gemfile*', 'Appraisals') }}
         restore-keys: |
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-
@@ -46,8 +46,10 @@ jobs:
         bundle config set --local path vendor/bundle
         bundle install --jobs 4 --retry 3 --without development
 
-    - name: Generate and install Appraisal gemfiles
-      run: bundle exec appraisal install
+    - name: Generate and install specific Appraisal gemfile
+      run: |
+        bundle exec appraisal generate
+        BUNDLE_GEMFILE=gemfiles/${{ matrix.rails-version }}.gemfile bundle install --jobs 4 --retry 3
 
     - name: Run tests
       run: bundle exec appraisal ${{ matrix.rails-version }} rake test

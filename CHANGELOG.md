@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **CI Optimization**: Install only specific Rails version gemfile per CI job instead of all versions, reducing build time significantly
+
 ## [0.2.0] - 2025-09-03
 
 ### Added
