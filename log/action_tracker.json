@@ -1,0 +1,14 @@
+{
+  "HomeController#index": {
+    "read": [],
+    "write": [],
+    "services": []
+  },
+  "UsersController#show": {
+    "read": [
+      "users"
+    ],
+    "write": [],
+    "services": []
+  }
+}

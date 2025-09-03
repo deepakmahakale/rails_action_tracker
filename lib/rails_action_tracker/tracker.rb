@@ -14,9 +14,9 @@ module RailsActionTracker
       def configure(options = {})
         @config = {
           print_to_rails_log: true,
-          write_to_file: false,
-          log_file_path: nil,
-          print_format: :table,
+          write_to_file: true,
+          log_file_path: 'log/action_tracker.json',
+          print_format: :json,
           log_format: nil,
           services: [],
           ignored_tables: %w[pg_attribute pg_index pg_class pg_namespace pg_type ar_internal_metadata

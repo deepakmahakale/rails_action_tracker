@@ -8,17 +8,17 @@ RailsActionTracker::Tracker.configure(
   # Whether to print summary to Rails log (default: true)
   print_to_rails_log: true,
 
-  # Whether to write summary to separate log file (default: false)
-  write_to_file: false,
+  # Whether to write summary to separate log file (default: true)
+  write_to_file: true,
 
-  # Path to separate log file (required if write_to_file is true)
-  log_file_path: Rails.root.join('log', 'action_tracker.log'),
+  # Path to separate log file (default: 'log/action_tracker.json')
+  log_file_path: Rails.root.join('log', 'action_tracker.json'),
 
-  # Format for console/Rails log output: :table (default), :csv, or :json
-  print_format: :table,
+  # Format for console/Rails log output: :json (default), :table, or :csv
+  print_format: :json,
 
-  # Format for log file output: :table, :csv, or :json (defaults to print_format if not specified)
-  log_format: :table,
+  # Format for log file output: :json, :table, or :csv (defaults to print_format if not specified)
+  log_format: :json,
 
   # Custom service detection patterns (optional)
   # You can define custom services to track beyond the defaults
