@@ -111,15 +111,14 @@ RailsActionTracker::Tracker.configure(
 #   }
 # )
 
-# Configuration 5: CSV format output
+# Configuration 5: CSV print format (current action only)
 # RailsActionTracker::Tracker.configure(
-#   output_format: :csv,
+#   print_format: :csv,
 #   print_to_rails_log: true
 # )
-# Example CSV output:
-# Action,table1,table2,table3,Redis,Sidekiq
-# JobsController#show,R,R,R,Y,-
-# JobsController#update,R,RW,W,Y,Y
+# Example CSV print output (shows only current action):
+# Action,table1,table2,Redis
+# JobsController#show,R,R,Y
 
 # Configuration 6: Different print and log formats
 # RailsActionTracker::Tracker.configure(
@@ -173,7 +172,33 @@ RailsActionTracker::Tracker.configure(
 # Print: Shows only current action's JSON data
 # Log: Accumulates all actions in a single JSON structure
 
-# Configuration 9: Backward compatibility (deprecated but still supported)
+# Configuration 9: CSV accumulation with intelligent merging
+# RailsActionTracker::Tracker.configure(
+#   print_format: :table,       # Console shows readable table
+#   log_format: :csv,           # File accumulates CSV data with smart merging
+#   print_to_rails_log: true,
+#   write_to_file: true,
+#   log_file_path: Rails.root.join('log', 'accumulated_tracker.csv')
+# )
+# Example accumulated CSV output:
+# Action,Elasticsearch,Redis,Sidekiq,posts,profiles,sessions,users
+# JobsController#show,Y,Y,-,R,R,W,RW
+# JobsController#update,-,Y,Y,RW,-,-,RW
+# Note: Headers expand as new tables/services are discovered
+# Note: Access patterns merge intelligently (R + W = RW)
+
+# Configuration 10: CSV print and CSV log (different behaviors)
+# RailsActionTracker::Tracker.configure(
+#   print_format: :csv,         # Console shows current action CSV
+#   log_format: :csv,           # File accumulates all actions
+#   print_to_rails_log: true,
+#   write_to_file: true,
+#   log_file_path: Rails.root.join('log', 'action_tracker.csv')
+# )
+# Print: Compact CSV with only current action's tables/services
+# Log: Full CSV with all actions and comprehensive column headers
+
+# Configuration 11: Backward compatibility (deprecated but still supported)
 # RailsActionTracker::Tracker.configure(
 #   output_format: :json        # Will set both print_format and log_format to :json
 # )

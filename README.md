@@ -93,10 +93,17 @@ UsersController#show - Models and Services accessed during request:
 +-------------------+-------------------+-------------------+
 ```
 
-**CSV Format (:csv)**
+**CSV Print Format (:csv for console)**
 ```
-Action,users,posts,user_sessions,audit_logs,Redis,Sidekiq
-UsersController#show,R,R,W,W,Y,Y
+Action,users,posts,user_sessions,Redis
+UsersController#show,R,R,W,Y
+```
+
+**CSV Log Format (:csv for file - accumulative)**
+```csv
+Action,Elasticsearch,Redis,Sidekiq,posts,profiles,sessions,users
+UsersController#show,Y,Y,-,R,R,W,RW
+PostsController#create,-,-,Y,RW,-,-,R
 ```
 
 **JSON Print Format (:json for console)**
@@ -124,12 +131,21 @@ UsersController#show: {
 }
 ```
 
-#### JSON Format Behavior Differences
+#### Format Behavior Differences
 
-The JSON format behaves differently for print vs log:
+Both JSON and CSV formats behave differently for print vs log:
 
+**JSON Format:**
 - **JSON Print** (console): Shows only current action data in clean format
 - **JSON Log** (file): Accumulates all actions in a persistent structure, merging new data when the same action is visited again
+
+**CSV Format:**
+- **CSV Print** (console): Shows only current action data with compact headers
+- **CSV Log** (file): Accumulates all actions in a single CSV file with dynamic headers that expand as new tables/services are encountered. When the same action is visited again, access patterns are merged intelligently (e.g., R + W = RW)
+
+**Table Format:**
+- **Table Print** (console): Shows current action data in formatted table
+- **Table Log** (file): Each action logged separately in table format (no accumulation)
 
 ### Configuration Options
 
@@ -202,18 +218,35 @@ RailsActionTracker::Tracker.configure(
 )
 ```
 
-**Option 6: CSV for spreadsheet analysis**
+**Option 6: CSV accumulation for spreadsheet analysis**
 ```ruby
 RailsActionTracker::Tracker.configure(
   print_format: :table,       # Console shows table
-  log_format: :csv,           # File saves CSV with dynamic columns
+  log_format: :csv,           # File accumulates CSV with dynamic columns
   print_to_rails_log: true,
   write_to_file: true,
   log_file_path: Rails.root.join('log', 'action_tracker.csv')
 )
 ```
+# Results in accumulated CSV like:
+# Action,Redis,Sidekiq,posts,profiles,users
+# UsersController#show,Y,-,R,R,RW
+# PostsController#create,-,Y,RW,-,R
 
-**Option 7: JSON everywhere with different behaviors**
+**Option 7: CSV print and CSV log (different behaviors)**
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_format: :csv,         # Console shows current action CSV
+  log_format: :csv,           # File accumulates all actions with smart merging
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'action_tracker.csv')
+)
+```
+# Print: Shows only current action's CSV data with minimal headers
+# Log: Accumulates all actions with expanding headers and intelligent merging
+
+**Option 8: JSON everywhere with different behaviors**
 ```ruby
 RailsActionTracker::Tracker.configure(
   print_format: :json,        # Console: current action JSON only
@@ -420,15 +453,18 @@ RailsActionTracker::Tracker.configure(
 
 ### Performance Analysis
 ```ruby
-# CSV format for importing into spreadsheet tools
+# CSV accumulation for importing into spreadsheet tools
 RailsActionTracker::Tracker.configure(
   print_format: :table,       # Console stays readable
-  log_format: :csv,           # Perfect for Excel/Google Sheets
+  log_format: :csv,           # Perfect for Excel/Google Sheets with accumulated data
   print_to_rails_log: true,
   write_to_file: true,
   log_file_path: Rails.root.join('log', 'performance_analysis.csv')
 )
 ```
+# Results in comprehensive CSV with all actions and merged access patterns
+# Headers expand automatically as new tables/services are discovered
+# Perfect for pivot tables and data analysis
 
 ### API Documentation Generation
 ```ruby

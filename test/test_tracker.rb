@@ -495,6 +495,218 @@ class TestTracker < Minitest::Test
     FileUtils.rm_rf(temp_dir) if temp_dir
   end
 
+  def test_format_csv_print_summary
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    output = @tracker.send(:format_csv_print_summary, read_models, write_models, services, controller_action)
+
+    lines = output.split("\n")
+    header = lines[0]
+    data = lines[1]
+
+    assert_includes header, 'Action'
+    assert_includes header, 'users'
+    assert_includes header, 'posts'
+    assert_includes header, 'comments'
+    assert_includes header, 'Redis'
+
+    assert_includes data, 'UsersController#show'
+    assert_includes data, 'R' # users read
+    assert_includes data, 'Y' # Redis accessed
+  end
+
+  def test_format_csv_print_summary_empty_data
+    output = @tracker.send(:format_csv_print_summary, [], [], [], 'TestController#index')
+
+    assert_includes output, 'TestController#index:'
+    assert_includes output, 'No models or services accessed during this request'
+  end
+
+  def test_accumulate_csv_data_new_action
+    # Create temporary file
+    temp_dir = Dir.mktmpdir
+    temp_file = File.join(temp_dir, 'test_tracker.csv')
+
+    # Configure tracker with temporary file
+    @tracker.configure(
+      write_to_file: true,
+      log_file_path: temp_file,
+      log_format: :csv
+    )
+
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    @tracker.send(:accumulate_csv_data, read_models, write_models, services, controller_action)
+
+    # Read the CSV file
+    assert File.exist?(temp_file)
+    csv_content = File.read(temp_file)
+    lines = csv_content.split("\n")
+
+    header = lines[0]
+    data = lines[1]
+
+    assert_includes header, 'Action'
+    assert_includes header, 'users'
+    assert_includes header, 'posts'
+    assert_includes header, 'comments'
+    assert_includes header, 'Redis'
+
+    assert_includes data, 'UsersController#show'
+    assert_includes data, 'R' # read access
+    assert_includes data, 'W' # write access
+    assert_includes data, 'Y' # service access
+  ensure
+    FileUtils.rm_rf(temp_dir) if temp_dir
+  end
+
+  def test_accumulate_csv_data_merge_existing_action
+    # Create temporary file
+    temp_dir = Dir.mktmpdir
+    temp_file = File.join(temp_dir, 'test_tracker.csv')
+
+    # Configure tracker with temporary file
+    @tracker.configure(
+      write_to_file: true,
+      log_file_path: temp_file,
+      log_format: :csv
+    )
+
+    controller_action = 'UsersController#show'
+
+    # First request
+    @tracker.send(:accumulate_csv_data, %w[users posts], ['comments'], ['Redis'], controller_action)
+
+    # Second request with additional data for same action
+    @tracker.send(:accumulate_csv_data, %w[posts profiles], ['users'], ['Sidekiq'], controller_action)
+
+    # Read the CSV file
+    csv_content = File.read(temp_file)
+    lines = csv_content.split("\n")
+
+    header = lines[0]
+    data = lines[1]
+
+    # Should contain merged headers
+    %w[users posts comments profiles Redis Sidekiq].each do |name|
+      assert_includes header, name
+    end
+
+    # Should contain merged data - users should be RW (was R, now also W)
+    assert_includes data, 'UsersController#show'
+
+    # Parse CSV properly to check specific values
+    require 'csv'
+    parsed = CSV.parse(csv_content, headers: true)
+    row = parsed.first
+
+    assert_equal 'RW', row['users'] # Was R, now R+W = RW
+    assert_equal 'R', row['posts']  # Read access
+    assert_equal 'W', row['comments'] # Write access
+    assert_equal 'R', row['profiles'] # Read access from second request
+    assert_equal 'Y', row['Redis'] # Service access
+    assert_equal 'Y', row['Sidekiq'] # Service access from second request
+  ensure
+    FileUtils.rm_rf(temp_dir) if temp_dir
+  end
+
+  def test_accumulate_csv_data_multiple_actions
+    # Create temporary file
+    temp_dir = Dir.mktmpdir
+    temp_file = File.join(temp_dir, 'test_tracker.csv')
+
+    # Configure tracker with temporary file
+    @tracker.configure(
+      write_to_file: true,
+      log_file_path: temp_file,
+      log_format: :csv
+    )
+
+    # First action
+    @tracker.send(:accumulate_csv_data, %w[users], [], ['Redis'], 'UsersController#show')
+
+    # Second action
+    @tracker.send(:accumulate_csv_data, %w[posts], ['posts'], ['Sidekiq'], 'PostsController#create')
+
+    # Read the CSV file
+    csv_content = File.read(temp_file)
+
+    # Should have two data rows
+    lines = csv_content.split("\n")
+    assert_equal 3, lines.length # header + 2 data rows
+
+    # Parse and verify both actions
+    require 'csv'
+    parsed = CSV.parse(csv_content, headers: true)
+
+    users_row = parsed.find { |row| row['Action'] == 'UsersController#show' }
+    posts_row = parsed.find { |row| row['Action'] == 'PostsController#create' }
+
+    assert users_row
+    assert posts_row
+
+    assert_equal 'R', users_row['users']
+    assert_equal 'Y', users_row['Redis']
+    assert_equal '-', users_row['posts'] # Not accessed by this action
+
+    assert_equal 'RW', posts_row['posts'] # Read and write
+    assert_equal 'Y', posts_row['Sidekiq']
+    assert_equal '-', posts_row['users'] # Not accessed by this action
+  ensure
+    FileUtils.rm_rf(temp_dir) if temp_dir
+  end
+
+  def test_csv_preserves_existing_data
+    # Create temporary file
+    temp_dir = Dir.mktmpdir
+    temp_file = File.join(temp_dir, 'test_accumulation.csv')
+
+    # Configure tracker with temporary file
+    @tracker.configure(
+      write_to_file: true,
+      log_file_path: temp_file,
+      log_format: :csv
+    )
+
+    # Write initial CSV data manually
+    initial_csv = "Action,existing_table,ExistingService\nExistingController#action,R,Y\n"
+    File.write(temp_file, initial_csv)
+
+    # Now accumulate new data
+    @tracker.send(:accumulate_csv_data, %w[users posts], ['comments'], ['Redis'], 'UsersController#show')
+
+    # Read the CSV file and verify both old and new data exist
+    csv_content = File.read(temp_file)
+    require 'csv'
+    parsed = CSV.parse(csv_content, headers: true)
+
+    # Should contain both actions
+    assert_equal 2, parsed.length
+
+    existing_row = parsed.find { |row| row['Action'] == 'ExistingController#action' }
+    new_row = parsed.find { |row| row['Action'] == 'UsersController#show' }
+
+    assert existing_row
+    assert new_row
+
+    # Verify existing data is preserved
+    assert_equal 'R', existing_row['existing_table']
+    assert_equal 'Y', existing_row['ExistingService']
+
+    # Verify new data is added
+    assert_equal 'R', new_row['users']
+    assert_equal 'W', new_row['comments']
+    assert_equal 'Y', new_row['Redis']
+  ensure
+    FileUtils.rm_rf(temp_dir) if temp_dir
+  end
+
   def test_log_message
     @tracker.start_tracking
 
