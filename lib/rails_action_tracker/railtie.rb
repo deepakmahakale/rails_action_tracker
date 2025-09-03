@@ -9,7 +9,11 @@ module RailsActionTracker
     end
 
     initializer 'rails_action_tracker.reconfigure', after: :load_config_initializers do |app|
-      RailsActionTracker::Tracker.configure(app.config.rails_action_tracker.to_h)
+      options = {}
+      app.config.rails_action_tracker.each_pair do |key, value|
+        options[key] = value
+      end
+      RailsActionTracker::Tracker.configure(options)
     end
 
     initializer 'rails_action_tracker.middleware', after: :load_config_initializers do |app|
