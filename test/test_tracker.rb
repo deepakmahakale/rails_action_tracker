@@ -2,6 +2,7 @@
 
 require 'test_helper'
 
+# rubocop:disable Metrics/ClassLength
 class TestTracker < Minitest::Test
   def setup
     @tracker = RailsActionTracker::Tracker
@@ -322,3 +323,4 @@ class TestTracker < Minitest::Test
     refute @tracker.send(:should_ignore_controller_action?, nil, nil)
   end
 end
+# rubocop:enable Metrics/ClassLength
