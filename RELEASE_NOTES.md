@@ -203,8 +203,161 @@ RailsActionTracker::Tracker.configure(
 
 ---
 
-**Full Changelog**: [View on GitHub](https://github.com/your-repo/rails_action_tracker/compare/v0.1.0...v0.2.0)
+**Full Changelog**: [View on GitHub](https://github.com/deepakmahakale/rails_action_tracker/compare/v0.1.0...v0.2.0)
 
-**Upgrade Guide**: See README.md for detailed migration instructions from v1.x
+**Upgrade Guide**: See README.md for detailed migration instructions from v0.1.0
 
-**Support**: Report issues on [GitHub Issues](https://github.com/your-repo/rails_action_tracker/issues)
+**Support**: Report issues on [GitHub Issues](https://github.com/deepakmahakale/rails_action_tracker/issues)
+
+---
+
+## Version 0.1.0 - Initial Release
+
+**Release Date:** January 2, 2025
+
+### 🚀 Core Features
+
+#### ActiveRecord Model Tracking
+- **Read Operation Detection**: Automatically tracks SELECT queries across all database tables
+- **Write Operation Detection**: Captures INSERT, UPDATE, and DELETE operations
+- **Table Classification**: Intelligent parsing of SQL statements to identify affected tables
+- **Thread-Safe Tracking**: Each request tracked independently using thread-local storage
+
+#### Service Usage Detection
+- **Built-in Service Patterns**: Detects Redis, Sidekiq, Pusher, Honeybadger, ActionMailer, HTTP calls
+- **Custom Service Configuration**: Define your own service detection patterns
+- **Log Message Analysis**: Scans Rails logs for service usage indicators
+- **Automatic Discovery**: No manual instrumentation required
+
+#### Flexible Logging Configuration
+- **Rails Logger Integration**: Beautiful colorized table output in development logs
+- **Separate File Logging**: Optional plain-text logging to dedicated files
+- **Dual Output**: Support for simultaneous Rails log and file output
+- **Environment Awareness**: Automatically disabled in test environment
+
+### 🎨 Output Format
+
+#### Table Format Display
+```
+UsersController#show - Models and Services accessed during request:
++-------------------+-------------------+-------------------+
+| Models Read       | Models Written    | Services Accessed |
++-------------------+-------------------+-------------------+
+| users             | user_sessions     | Redis             |
+| posts             | audit_logs        | Sidekiq           |
+| comments          |                   | ActionMailer      |
++-------------------+-------------------+-------------------+
+```
+
+### ⚙️ Configuration Options
+
+#### Basic Setup
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_to_rails_log: true,  # Colorized output in Rails logs (default: true)
+  write_to_file: false,      # Write to separate file (default: false)
+  log_file_path: Rails.root.join('log', 'action_tracker.log'),
+  
+  # Custom service detection
+  services: [
+    { name: 'Redis', pattern: /redis/i },
+    { name: 'CustomAPI', pattern: /custom_api/i }
+  ],
+  
+  # Tables to ignore from tracking
+  ignored_tables: ['audit_logs', 'session_data']
+)
+```
+
+#### Smart Table Filtering
+- **System Tables**: Automatically ignores PostgreSQL system tables (`pg_*`)
+- **Rails Internals**: Skips `ar_internal_metadata`, `schema_migrations`
+- **Custom Filtering**: Configure additional tables to ignore
+- **Pattern Matching**: Support for flexible table name patterns
+
+### 🔧 Rails Integration
+
+#### Seamless Setup
+- **Rails Generator**: `rails generate rails_action_tracker:install`
+- **Automatic Middleware**: Integrated via Rails::Railtie
+- **Zero Configuration**: Works out of the box with sensible defaults
+- **Hot Reloading**: Configuration changes applied immediately in development
+
+#### Performance Optimized
+- **Minimal Overhead**: Efficient SQL parsing and tracking
+- **Asset Request Skipping**: No tracking for static assets
+- **Test Environment Disabled**: Automatic test environment detection
+- **Memory Efficient**: Uses Set data structures for deduplication
+
+### 📊 Use Cases
+
+#### Development & Debugging
+- **Quick Insight**: See what data each action touches at a glance
+- **N+1 Detection**: Identify repeated database queries
+- **Service Dependency**: Understand external service usage patterns
+- **Refactoring Aid**: Guide code optimization decisions
+
+#### Performance Analysis
+- **Database Access Patterns**: Track which actions are database-heavy
+- **Service Usage Tracking**: Monitor external service calls
+- **Data Flow Understanding**: Visualize application data dependencies
+
+### 🧪 Quality Assurance
+
+#### Comprehensive Testing
+- **45 Test Cases**: Full feature coverage with comprehensive test suite
+- **188 Assertions**: Thorough validation of all functionality
+- **Multi-Rails Testing**: Appraisal-based testing across Rails 5.0-8.0
+- **CI/CD Pipeline**: GitHub Actions for automated testing
+
+#### Code Quality
+- **RuboCop Compliant**: Follows Ruby style guidelines
+- **Thread Safety**: Safe for production multi-threaded environments
+- **Error Handling**: Graceful degradation when tracking fails
+- **Documentation**: Comprehensive README and inline documentation
+
+### 🔄 Version Compatibility
+
+#### Ruby Support
+- **Ruby 2.7+**: Fully tested and supported
+- **Ruby 3.x**: Forward compatible with modern Ruby versions
+
+#### Rails Support
+- **Rails 5.0+**: Broad compatibility across Rails versions
+- **Rails 6.x**: Fully tested with Rails 6.0 and 6.1
+- **Rails 7.x**: Compatible with Rails 7.0
+- **Rails 8.x**: Forward compatible
+
+### 🏃‍♂️ Getting Started
+
+#### Installation
+```ruby
+# Add to Gemfile
+gem 'rails_action_tracker'
+
+# Install and configure
+bundle install
+rails generate rails_action_tracker:install
+```
+
+#### Immediate Benefits
+- **Zero Learning Curve**: Works immediately after installation
+- **Instant Visibility**: See database and service usage patterns right away
+- **Development Insights**: Better understanding of application behavior
+- **Performance Awareness**: Identify optimization opportunities
+
+### 📖 Documentation
+
+#### Complete Guide
+- **Installation Instructions**: Step-by-step setup process  
+- **Configuration Examples**: Multiple use case scenarios
+- **Customization Guide**: Advanced configuration options
+- **Troubleshooting**: Common issues and solutions
+
+---
+
+**Initial Release**: [View on GitHub](https://github.com/deepakmahakale/rails_action_tracker/releases/tag/v0.1.0)
+
+**Documentation**: See README.md for complete setup and usage instructions
+
+**Support**: Report issues on [GitHub Issues](https://github.com/deepakmahakale/rails_action_tracker/issues)
