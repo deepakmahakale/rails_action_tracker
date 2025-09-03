@@ -20,7 +20,6 @@ RailsActionTracker::Tracker.configure(
   # Format for log file output: :table, :csv, or :json (defaults to print_format if not specified)
   log_format: :table,
 
-
   # Custom service detection patterns (optional)
   # You can define custom services to track beyond the defaults
   services: [
@@ -195,4 +194,3 @@ RailsActionTracker::Tracker.configure(
 # )
 # Print: Compact CSV with only current action's tables/services
 # Log: Full CSV with all actions and comprehensive column headers
-

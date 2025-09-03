@@ -442,7 +442,6 @@ class TestTracker < Minitest::Test
     assert_equal :csv, config[:log_format]
   end
 
-
   def test_log_format_defaults_to_print_format
     @tracker.configure(print_format: :csv)
 
