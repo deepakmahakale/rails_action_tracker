@@ -20,8 +20,6 @@ RailsActionTracker::Tracker.configure(
   # Format for log file output: :table, :csv, or :json (defaults to print_format if not specified)
   log_format: :table,
 
-  # Deprecated: Use print_format and log_format instead
-  # output_format: :table,
 
   # Custom service detection patterns (optional)
   # You can define custom services to track beyond the defaults
@@ -198,8 +196,3 @@ RailsActionTracker::Tracker.configure(
 # Print: Compact CSV with only current action's tables/services
 # Log: Full CSV with all actions and comprehensive column headers
 
-# Configuration 11: Backward compatibility (deprecated but still supported)
-# RailsActionTracker::Tracker.configure(
-#   output_format: :json        # Will set both print_format and log_format to :json
-# )
-# Note: output_format is deprecated, use print_format and log_format for better control

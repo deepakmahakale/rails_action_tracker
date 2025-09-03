@@ -31,8 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Method Parameter Optimization**: Reduced parameter lists and improved method signatures
 - **Logger Interference**: Prevented logger headers from corrupting structured data files
 
-### Deprecated
-- `output_format` configuration option (still supported for backward compatibility)
+### Removed
+- **BREAKING**: Removed deprecated `output_format` configuration option - use `print_format` and `log_format` instead
 
 ## [0.1.0] - 2025-01-02
 

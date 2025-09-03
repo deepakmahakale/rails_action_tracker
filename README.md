@@ -229,7 +229,7 @@ RailsActionTracker::Tracker.configure(
 )
 ```
 # Results in accumulated CSV like:
-# Action,Redis,Sidekiq,posts,profiles,users
+# Action,Redis,Sidekiq,posts,profiles,users  
 # UsersController#show,Y,-,R,R,RW
 # PostsController#create,-,Y,RW,-,R
 
@@ -243,8 +243,8 @@ RailsActionTracker::Tracker.configure(
   log_file_path: Rails.root.join('log', 'action_tracker.csv')
 )
 ```
-# Print: Shows only current action's CSV data with minimal headers
-# Log: Accumulates all actions with expanding headers and intelligent merging
+**Print behavior:** Shows only current action's CSV data with minimal headers  
+**Log behavior:** Accumulates all actions with expanding headers and intelligent merging
 
 **Option 8: JSON everywhere with different behaviors**
 ```ruby
@@ -254,23 +254,6 @@ RailsActionTracker::Tracker.configure(
   print_to_rails_log: true,
   write_to_file: true,
   log_file_path: Rails.root.join('log', 'action_tracker.json')
-)
-```
-
-### Migration from v1.x
-
-If you're upgrading from v1.x and using `output_format`, the gem maintains backward compatibility:
-
-```ruby
-# Old configuration (still works)
-RailsActionTracker::Tracker.configure(
-  output_format: :json  # Sets both print_format and log_format to :json
-)
-
-# New configuration (recommended)
-RailsActionTracker::Tracker.configure(
-  print_format: :table,  # Different formats for different outputs
-  log_format: :json
 )
 ```
 
@@ -462,9 +445,8 @@ RailsActionTracker::Tracker.configure(
   log_file_path: Rails.root.join('log', 'performance_analysis.csv')
 )
 ```
-# Results in comprehensive CSV with all actions and merged access patterns
-# Headers expand automatically as new tables/services are discovered
-# Perfect for pivot tables and data analysis
+
+Results in comprehensive CSV with all actions and merged access patterns. Headers expand automatically as new tables/services are discovered, making it perfect for pivot tables and data analysis.
 
 ### API Documentation Generation
 ```ruby

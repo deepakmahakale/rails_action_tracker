@@ -18,19 +18,12 @@ module RailsActionTracker
           log_file_path: nil,
           print_format: :table,
           log_format: nil,
-          output_format: nil, # Deprecated: kept for backward compatibility
           services: [],
           ignored_tables: %w[pg_attribute pg_index pg_class pg_namespace pg_type ar_internal_metadata
                              schema_migrations],
           ignored_controllers: [],
           ignored_actions: {}
         }.merge(options)
-
-        # Handle backward compatibility with output_format
-        if @config[:output_format] && !options.key?(:print_format) && !options.key?(:log_format)
-          @config[:print_format] = @config[:output_format]
-          @config[:log_format] = @config[:output_format]
-        end
 
         # Default log_format to print_format if not specified
         @config[:log_format] ||= @config[:print_format]

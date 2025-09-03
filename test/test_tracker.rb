@@ -248,7 +248,7 @@ class TestTracker < Minitest::Test
     @tracker.configure(
       write_to_file: true,
       log_file_path: temp_file,
-      output_format: :json
+      print_format: :json
     )
 
     read_models = %w[users posts]
@@ -280,7 +280,7 @@ class TestTracker < Minitest::Test
     @tracker.configure(
       write_to_file: true,
       log_file_path: temp_file,
-      output_format: :json
+      print_format: :json
     )
 
     controller_action = 'UsersController#show'
@@ -313,7 +313,7 @@ class TestTracker < Minitest::Test
     @tracker.configure(
       write_to_file: true,
       log_file_path: temp_file,
-      output_format: :json
+      print_format: :json
     )
 
     # First action
@@ -442,13 +442,6 @@ class TestTracker < Minitest::Test
     assert_equal :csv, config[:log_format]
   end
 
-  def test_backward_compatibility_with_output_format
-    @tracker.configure(output_format: :json)
-
-    config = @tracker.config
-    assert_equal :json, config[:print_format]
-    assert_equal :json, config[:log_format]
-  end
 
   def test_log_format_defaults_to_print_format
     @tracker.configure(print_format: :csv)

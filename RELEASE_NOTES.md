@@ -9,7 +9,7 @@
 #### Separate Print and Log Format Support
 - **Independent Format Control**: Configure different output formats for console display (`print_format`) and file logging (`log_format`)
 - **Mix & Match Flexibility**: Use table format for console readability while saving JSON/CSV for analysis
-- **Backward Compatible**: Existing `output_format` configuration continues to work seamlessly
+- **Clean API**: Streamlined configuration with `print_format` and `log_format` options
 
 #### JSON Accumulation with Intelligent Merging
 - **Persistent JSON Logs**: JSON format now accumulates all actions in a single valid JSON file
@@ -160,13 +160,13 @@ log_format: :json         # Accumulated endpoint data
 - **Performance Guidelines**: Recommendations for production use
 - **Troubleshooting Section**: Common issues and solutions
 
-### 🔄 Backward Compatibility
+### 🎯 Streamlined Configuration
 
-#### Seamless Upgrades
-- **No Breaking Changes**: All v1.x configurations continue to work
-- **Automatic Migration**: `output_format` automatically sets both `print_format` and `log_format`
-- **Deprecation Warnings**: Clear guidance on migrating to new configuration options
-- **Feature Parity**: All v1.x functionality preserved and enhanced
+#### Clean API Design
+- **Simplified Configuration**: Two clear options - `print_format` and `log_format`
+- **Intuitive Naming**: Configuration names clearly indicate their purpose
+- **No Deprecated Options**: Clean, modern API without legacy cruft
+- **Future-Proof Design**: Built for long-term maintainability
 
 ### 🏃‍♂️ Getting Started
 
@@ -205,7 +205,7 @@ RailsActionTracker::Tracker.configure(
 
 **Full Changelog**: [View on GitHub](https://github.com/deepakmahakale/rails_action_tracker/compare/v0.1.0...v0.2.0)
 
-**Upgrade Guide**: See README.md for detailed migration instructions from v0.1.0
+**Configuration Guide**: See README.md for complete setup and configuration examples
 
 **Support**: Report issues on [GitHub Issues](https://github.com/deepakmahakale/rails_action_tracker/issues)
 
