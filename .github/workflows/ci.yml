@@ -35,7 +35,7 @@ jobs:
         path: |
           vendor/bundle
           gemfiles/vendor/bundle
-        key: ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-${{ hashFiles('Gemfile', 'gemfiles/${{ matrix.rails-version }}.gemfile*', 'Appraisals') }}
+        key: ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-${{ hashFiles('Gemfile', 'gemfiles/rails_*.gemfile*', 'Appraisals') }}
         restore-keys: |
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-${{ matrix.rails-version }}-
           ${{ runner.os }}-gems-${{ matrix.ruby-version }}-
@@ -46,10 +46,13 @@ jobs:
         bundle config set --local path vendor/bundle
         bundle install --jobs 4 --retry 3 --without development
 
-    - name: Generate and install specific Appraisal gemfile
+    - name: Generate and install only needed Appraisal gemfile
       run: |
+        # Generate all gemfiles first
         bundle exec appraisal generate
-        BUNDLE_GEMFILE=gemfiles/${{ matrix.rails-version }}.gemfile bundle install --jobs 4 --retry 3
+        # Install only the specific gemfile we need (convert dashes to underscores)
+        RAILS_GEMFILE=$(echo "${{ matrix.rails-version }}" | tr '-' '_')
+        BUNDLE_GEMFILE=gemfiles/${RAILS_GEMFILE}.gemfile bundle install --jobs 4 --retry 3
 
     - name: Run tests
       run: bundle exec appraisal ${{ matrix.rails-version }} rake test
