@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'json'
+require 'tmpdir'
 
 # rubocop:disable Metrics/ClassLength
 class TestTracker < Minitest::Test
@@ -160,7 +162,7 @@ class TestTracker < Minitest::Test
     services = ['Redis']
     controller_action = 'UsersController#show'
 
-    output = @tracker.send(:format_summary, read_models, write_models, services, controller_action, true)
+    output = @tracker.send(:format_table_summary, read_models, write_models, services, controller_action, true)
 
     assert_includes output, 'UsersController#show'
     assert_includes output, 'users'
@@ -175,7 +177,7 @@ class TestTracker < Minitest::Test
     write_models = ['posts']
     services = ['Redis']
 
-    output = @tracker.send(:format_summary, read_models, write_models, services, nil, false)
+    output = @tracker.send(:format_table_summary, read_models, write_models, services, nil, false)
 
     # Should not contain ANSI escape codes
     refute_match(/\e\[\d+m/, output)
@@ -185,10 +187,312 @@ class TestTracker < Minitest::Test
   end
 
   def test_format_summary_empty_data
-    output = @tracker.send(:format_summary, [], [], [], 'TestController#index', false)
+    output = @tracker.send(:format_table_summary, [], [], [], 'TestController#index', false)
 
     assert_includes output, 'TestController#index'
     assert_includes output, 'No models or services accessed during this request'
+  end
+
+  def test_format_csv_summary
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    output = @tracker.send(:format_csv_summary, read_models, write_models, services, controller_action)
+
+    lines = output.split("\n")
+    header = lines[0]
+    data = lines[1]
+
+    assert_includes header, 'Action'
+    assert_includes header, 'users'
+    assert_includes header, 'posts'
+    assert_includes header, 'comments'
+    assert_includes header, 'Redis'
+
+    assert_includes data, 'UsersController#show'
+    assert_includes data, 'R' # users read
+    assert_includes data, 'Y' # Redis accessed
+  end
+
+  def test_format_csv_summary_empty_data
+    output = @tracker.send(:format_csv_summary, [], [], [], 'TestController#index')
+
+    assert_includes output, 'Action'
+    assert_includes output, 'No models or services accessed during this request'
+  end
+
+  def test_format_json_summary
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    output = @tracker.send(:format_json_summary, read_models, write_models, services, controller_action)
+
+    parsed = JSON.parse(output)
+
+    assert_includes parsed.keys, 'UsersController#show'
+    assert_equal %w[posts users], parsed['UsersController#show']['read'].sort
+    assert_equal ['comments'], parsed['UsersController#show']['write']
+    assert_equal ['Redis'], parsed['UsersController#show']['services']
+  end
+
+  def test_accumulate_json_data_new_action
+    # Create temporary file
+    temp_dir = Dir.mktmpdir
+    temp_file = File.join(temp_dir, 'test_tracker.json')
+
+    # Configure tracker with temporary file
+    @tracker.configure(
+      write_to_file: true,
+      log_file_path: temp_file,
+      output_format: :json
+    )
+
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    @tracker.send(:accumulate_json_data, read_models, write_models, services, controller_action)
+
+    # Read the JSON file
+    assert File.exist?(temp_file)
+    json_content = File.read(temp_file)
+    parsed = JSON.parse(json_content)
+
+    assert_includes parsed.keys, 'UsersController#show'
+    assert_equal %w[posts users], parsed['UsersController#show']['read']
+    assert_equal ['comments'], parsed['UsersController#show']['write']
+    assert_equal ['Redis'], parsed['UsersController#show']['services']
+  ensure
+    FileUtils.rm_rf(temp_dir) if temp_dir
+  end
+
+  def test_accumulate_json_data_merge_existing_action
+    # Create temporary file
+    temp_dir = Dir.mktmpdir
+    temp_file = File.join(temp_dir, 'test_tracker.json')
+
+    # Configure tracker with temporary file
+    @tracker.configure(
+      write_to_file: true,
+      log_file_path: temp_file,
+      output_format: :json
+    )
+
+    controller_action = 'UsersController#show'
+
+    # First request
+    @tracker.send(:accumulate_json_data, %w[users posts], ['comments'], ['Redis'], controller_action)
+
+    # Second request with additional data
+    @tracker.send(:accumulate_json_data, %w[posts profiles], ['posts'], ['Sidekiq'], controller_action)
+
+    # Read the JSON file
+    json_content = File.read(temp_file)
+    parsed = JSON.parse(json_content)
+
+    # Should contain merged data
+    assert_includes parsed.keys, 'UsersController#show'
+    assert_equal %w[posts profiles users], parsed['UsersController#show']['read'].sort
+    assert_equal %w[comments posts], parsed['UsersController#show']['write'].sort
+    assert_equal %w[Redis Sidekiq], parsed['UsersController#show']['services'].sort
+  ensure
+    FileUtils.rm_rf(temp_dir) if temp_dir
+  end
+
+  def test_accumulate_json_data_multiple_actions
+    # Create temporary file
+    temp_dir = Dir.mktmpdir
+    temp_file = File.join(temp_dir, 'test_tracker.json')
+
+    # Configure tracker with temporary file
+    @tracker.configure(
+      write_to_file: true,
+      log_file_path: temp_file,
+      output_format: :json
+    )
+
+    # First action
+    @tracker.send(:accumulate_json_data, %w[users], [], ['Redis'], 'UsersController#show')
+
+    # Second action
+    @tracker.send(:accumulate_json_data, %w[posts], ['posts'], ['Sidekiq'], 'PostsController#create')
+
+    # Read the JSON file
+    json_content = File.read(temp_file)
+    parsed = JSON.parse(json_content)
+
+    # Should contain both actions
+    assert_equal 2, parsed.keys.length
+    assert_includes parsed.keys, 'UsersController#show'
+    assert_includes parsed.keys, 'PostsController#create'
+
+    assert_equal ['users'], parsed['UsersController#show']['read']
+    assert_equal [], parsed['UsersController#show']['write']
+    assert_equal ['Redis'], parsed['UsersController#show']['services']
+
+    assert_equal ['posts'], parsed['PostsController#create']['read']
+    assert_equal ['posts'], parsed['PostsController#create']['write']
+    assert_equal ['Sidekiq'], parsed['PostsController#create']['services']
+  ensure
+    FileUtils.rm_rf(temp_dir) if temp_dir
+  end
+
+  def test_format_json_print_summary
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    output = @tracker.send(:format_json_print_summary, read_models, write_models, services, controller_action)
+
+    assert_includes output, 'UsersController#show:'
+    assert_includes output, '"read":'
+    assert_includes output, '"posts"'
+    assert_includes output, '"users"'
+    assert_includes output, '"write":'
+    assert_includes output, '"comments"'
+    assert_includes output, '"services":'
+    assert_includes output, '"Redis"'
+  end
+
+  def test_generate_format_output_table
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    colored_output, plain_output = @tracker.send(
+      :generate_format_output, :table, read_models, write_models, services, controller_action, true
+    )
+
+    assert_includes colored_output, 'UsersController#show'
+    assert_includes plain_output, 'UsersController#show'
+    assert_includes colored_output, 'users'
+    assert_includes plain_output, 'comments'
+  end
+
+  def test_generate_format_output_csv
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    colored_output, plain_output = @tracker.send(
+      :generate_format_output, :csv, read_models, write_models, services, controller_action, true
+    )
+
+    assert_equal colored_output, plain_output
+    assert_includes colored_output, 'Action,comments,posts,users,Redis'
+    assert_includes colored_output, 'UsersController#show'
+  end
+
+  def test_generate_format_output_json
+    read_models = %w[users posts]
+    write_models = ['comments']
+    services = ['Redis']
+    controller_action = 'UsersController#show'
+
+    colored_output, plain_output = @tracker.send(
+      :generate_format_output, :json, read_models, write_models, services, controller_action, true
+    )
+
+    assert_equal colored_output, plain_output
+    assert_includes colored_output, 'UsersController#show:'
+    assert_includes colored_output, '"read":'
+    assert_includes colored_output, '"posts"'
+    assert_includes colored_output, '"users"'
+  end
+
+  def test_separate_print_and_log_formats
+    @tracker.configure(
+      print_format: :json,
+      log_format: :csv,
+      print_to_rails_log: false, # Don't test log output here
+      write_to_file: false # Don't test file output here
+    )
+
+    config = @tracker.config
+    assert_equal :json, config[:print_format]
+    assert_equal :csv, config[:log_format]
+  end
+
+  def test_backward_compatibility_with_output_format
+    @tracker.configure(output_format: :json)
+
+    config = @tracker.config
+    assert_equal :json, config[:print_format]
+    assert_equal :json, config[:log_format]
+  end
+
+  def test_log_format_defaults_to_print_format
+    @tracker.configure(print_format: :csv)
+
+    config = @tracker.config
+    assert_equal :csv, config[:print_format]
+    assert_equal :csv, config[:log_format]
+  end
+
+  def test_explicit_log_format_overrides_default
+    @tracker.configure(
+      print_format: :table,
+      log_format: :json
+    )
+
+    config = @tracker.config
+    assert_equal :table, config[:print_format]
+    assert_equal :json, config[:log_format]
+  end
+
+  def test_json_accumulation_preserves_existing_data
+    # Create temporary file
+    temp_dir = Dir.mktmpdir
+    temp_file = File.join(temp_dir, 'test_accumulation.json')
+
+    # Configure tracker with temporary file
+    @tracker.configure(
+      write_to_file: true,
+      log_file_path: temp_file,
+      log_format: :json
+    )
+
+    # Write initial data to the file manually to simulate existing data
+    initial_data = {
+      'ExistingController#action' => {
+        'read' => ['existing_table'],
+        'write' => [],
+        'services' => ['ExistingService']
+      }
+    }
+    File.write(temp_file, JSON.pretty_generate(initial_data))
+
+    # Now accumulate new data
+    @tracker.send(:accumulate_json_data, %w[users posts], ['comments'], ['Redis'], 'UsersController#show')
+
+    # Read the JSON file and verify both old and new data exist
+    json_content = File.read(temp_file)
+    parsed = JSON.parse(json_content)
+
+    # Should contain both the existing and new data
+    assert_equal 2, parsed.keys.length
+    assert_includes parsed.keys, 'ExistingController#action'
+    assert_includes parsed.keys, 'UsersController#show'
+
+    # Verify existing data is preserved
+    assert_equal ['existing_table'], parsed['ExistingController#action']['read']
+    assert_equal [], parsed['ExistingController#action']['write']
+    assert_equal ['ExistingService'], parsed['ExistingController#action']['services']
+
+    # Verify new data is added
+    assert_equal %w[posts users], parsed['UsersController#show']['read']
+    assert_equal ['comments'], parsed['UsersController#show']['write']
+    assert_equal ['Redis'], parsed['UsersController#show']['services']
+  ensure
+    FileUtils.rm_rf(temp_dir) if temp_dir
   end
 
   def test_log_message

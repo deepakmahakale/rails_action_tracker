@@ -41,6 +41,10 @@ RailsActionTracker::Tracker.configure(
   write_to_file: false,      # Write to separate file (default: false)
   log_file_path: Rails.root.join('log', 'action_tracker.log'),
 
+  # Output format controls (new in v2.0+)
+  print_format: :table,      # Format for console/Rails log: :table, :csv, :json
+  log_format: :table,        # Format for log file: :table, :csv, :json
+
   # Custom services to track (optional)
   services: [
     { name: 'Redis', pattern: /redis/i },
@@ -53,6 +57,80 @@ RailsActionTracker::Tracker.configure(
 )
 ```
 
+### Output Formats
+
+**🎨 New in v2.0+**: The gem now supports different output formats and allows you to configure separate formats for console output and file logging.
+
+#### Available Formats
+
+1. **`:table`** - Clean tabular format (default)
+2. **`:csv`** - CSV format with dynamic headers
+3. **`:json`** - JSON format with different behaviors for print vs log
+
+#### Format Configuration
+
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_format: :table,      # Format for console/Rails log output
+  log_format: :json,         # Format for log file output (can be different!)
+  
+  print_to_rails_log: true,  # Enable console output
+  write_to_file: true,       # Enable file logging
+  log_file_path: Rails.root.join('log', 'action_tracker.json')
+)
+```
+
+#### Format Examples
+
+**Table Format (:table)**
+```
+UsersController#show - Models and Services accessed during request:
++-------------------+-------------------+-------------------+
+| Models Read       | Models Written    | Services Accessed |
++-------------------+-------------------+-------------------+
+| users             | user_sessions     | Redis             |
+| posts             | audit_logs        | Sidekiq           |
++-------------------+-------------------+-------------------+
+```
+
+**CSV Format (:csv)**
+```
+Action,users,posts,user_sessions,audit_logs,Redis,Sidekiq
+UsersController#show,R,R,W,W,Y,Y
+```
+
+**JSON Print Format (:json for console)**
+```
+UsersController#show: {
+  "read": ["users", "posts"],
+  "write": ["user_sessions", "audit_logs"],
+  "services": ["Redis", "Sidekiq"]
+}
+```
+
+**JSON Log Format (:json for file - accumulative)**
+```json
+{
+  "UsersController#show": {
+    "read": ["users", "posts"],
+    "write": ["user_sessions"],
+    "services": ["Redis"]
+  },
+  "UsersController#update": {
+    "read": ["users", "posts"],
+    "write": ["users", "audit_logs"],
+    "services": ["Redis", "Sidekiq"]
+  }
+}
+```
+
+#### JSON Format Behavior Differences
+
+The JSON format behaves differently for print vs log:
+
+- **JSON Print** (console): Shows only current action data in clean format
+- **JSON Log** (file): Accumulates all actions in a persistent structure, merging new data when the same action is visited again
+
 ### Configuration Options
 
 **Basic Configuration**
@@ -62,6 +140,10 @@ RailsActionTracker::Tracker.configure(
   print_to_rails_log: true,  # Print to Rails logger (default: true)
   write_to_file: false,      # Write to separate file (default: false)
   log_file_path: nil,        # Path to separate log file (required if write_to_file: true)
+  
+  print_format: :table,      # Format for console output: :table, :csv, :json
+  log_format: :table,        # Format for file output (defaults to print_format)
+  
   ignored_tables: [],        # Tables to ignore from tracking (optional)
   ignored_controllers: [],   # Controllers to completely ignore (optional)
   ignored_actions: {}        # Specific controller#action combinations to ignore (optional)
@@ -93,6 +175,69 @@ RailsActionTracker::Tracker.configure(
   print_to_rails_log: true,
   write_to_file: true,
   log_file_path: Rails.root.join('log', 'action_tracker.log')
+)
+```
+
+### Format Configuration Examples
+
+**Option 4: Different print and log formats**
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_format: :json,        # Console shows clean JSON for current action
+  log_format: :csv,           # File saves in CSV format for analysis
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'action_tracker.csv')
+)
+```
+
+**Option 5: JSON accumulation for analysis**
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_format: :table,       # Console shows familiar table format
+  log_format: :json,          # File accumulates JSON data across requests
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'action_tracker.json')
+)
+```
+
+**Option 6: CSV for spreadsheet analysis**
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_format: :table,       # Console shows table
+  log_format: :csv,           # File saves CSV with dynamic columns
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'action_tracker.csv')
+)
+```
+
+**Option 7: JSON everywhere with different behaviors**
+```ruby
+RailsActionTracker::Tracker.configure(
+  print_format: :json,        # Console: current action JSON only
+  log_format: :json,          # File: accumulative JSON structure
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'action_tracker.json')
+)
+```
+
+### Migration from v1.x
+
+If you're upgrading from v1.x and using `output_format`, the gem maintains backward compatibility:
+
+```ruby
+# Old configuration (still works)
+RailsActionTracker::Tracker.configure(
+  output_format: :json  # Sets both print_format and log_format to :json
+)
+
+# New configuration (recommended)
+RailsActionTracker::Tracker.configure(
+  print_format: :table,  # Different formats for different outputs
+  log_format: :json
 )
 ```
 
@@ -259,6 +404,56 @@ RailsActionTracker::Tracker.print_summary
 RailsActionTracker::Tracker.stop_tracking
 ```
 
+## Format Use Cases
+
+### Development & Debugging
+```ruby
+# Clean console output, detailed JSON logs for analysis
+RailsActionTracker::Tracker.configure(
+  print_format: :table,       # Easy to read during development
+  log_format: :json,          # Detailed logs for debugging
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'action_tracker.json')
+)
+```
+
+### Performance Analysis
+```ruby
+# CSV format for importing into spreadsheet tools
+RailsActionTracker::Tracker.configure(
+  print_format: :table,       # Console stays readable
+  log_format: :csv,           # Perfect for Excel/Google Sheets
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'performance_analysis.csv')
+)
+```
+
+### API Documentation Generation
+```ruby
+# JSON logs for automated API documentation
+RailsActionTracker::Tracker.configure(
+  print_format: :json,        # Immediate JSON feedback
+  log_format: :json,          # Accumulated endpoint data
+  print_to_rails_log: true,
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'api_endpoints.json')
+)
+```
+
+### Monitoring & Alerting
+```ruby
+# CSV for log aggregation systems
+RailsActionTracker::Tracker.configure(
+  print_format: :table,       # Human-readable console
+  log_format: :csv,           # Machine-readable logs
+  print_to_rails_log: false,  # Reduce console noise
+  write_to_file: true,
+  log_file_path: Rails.root.join('log', 'monitoring.csv')
+)
+```
+
 ## How It Works
 
 The gem integrates seamlessly with Rails:
@@ -274,10 +469,13 @@ The gem integrates seamlessly with Rails:
 - 🔍 **Model tracking** - See which ActiveRecord models are read/written
 - 🏢 **Service detection** - Monitor Redis, Sidekiq, HTTP calls, and more
 - 📝 **Flexible logging** - Rails logger, separate files, or both
-- 🎨 **Clean output** - Colorized tables in development
+- 🎨 **Multiple output formats** - Table, CSV, and JSON formats with separate print/log controls
+- 📊 **JSON accumulation** - Persistent JSON logs that merge data across requests
+- 🔄 **Format flexibility** - Different formats for console vs file output
 - ⚡ **Zero configuration** - Works immediately after installation
 - 🧵 **Thread-safe** - Handles concurrent requests properly
 - 🚀 **Production ready** - Minimal performance impact
+- 🔧 **Backward compatible** - Seamless upgrade from v1.x configurations
 
 ## Thread Safety
 

@@ -14,6 +14,15 @@ RailsActionTracker::Tracker.configure(
   # Path to separate log file (required if write_to_file is true)
   log_file_path: Rails.root.join('log', 'action_tracker.log'),
 
+  # Format for console/Rails log output: :table (default), :csv, or :json
+  print_format: :table,
+
+  # Format for log file output: :table, :csv, or :json (defaults to print_format if not specified)
+  log_format: :table,
+
+  # Deprecated: Use print_format and log_format instead
+  # output_format: :table,
+
   # Custom service detection patterns (optional)
   # You can define custom services to track beyond the defaults
   services: [
@@ -101,3 +110,71 @@ RailsActionTracker::Tracker.configure(
 #     'ApiController' => ['heartbeat', 'version']   # Multiple specific actions
 #   }
 # )
+
+# Configuration 5: CSV format output
+# RailsActionTracker::Tracker.configure(
+#   output_format: :csv,
+#   print_to_rails_log: true
+# )
+# Example CSV output:
+# Action,table1,table2,table3,Redis,Sidekiq
+# JobsController#show,R,R,R,Y,-
+# JobsController#update,R,RW,W,Y,Y
+
+# Configuration 6: Different print and log formats
+# RailsActionTracker::Tracker.configure(
+#   print_format: :json,        # Console shows JSON for current action only
+#   log_format: :csv,           # Log file saves in CSV format
+#   print_to_rails_log: true,
+#   write_to_file: true,
+#   log_file_path: Rails.root.join('log', 'action_tracker.csv')
+# )
+# Print output (Rails log):
+# JobsController#show: {
+#   "read": ["table1", "table2", "table3"],
+#   "write": [],
+#   "services": ["Redis"]
+# }
+# Log file output (CSV format):
+# Action,table1,table2,table3,Redis
+# JobsController#show,R,R,R,Y
+
+# Configuration 7: JSON accumulation in log file, table in console
+# RailsActionTracker::Tracker.configure(
+#   print_format: :table,       # Console shows table format
+#   log_format: :json,          # Log file accumulates JSON data
+#   print_to_rails_log: true,
+#   write_to_file: true,
+#   log_file_path: Rails.root.join('log', 'action_tracker.json')
+# )
+# Print output: Standard table format in Rails log
+# Log file output: Accumulated JSON structure like:
+# {
+#   "JobsController#show": {
+#     "read": ["table1", "table2", "table3"],
+#     "write": [],
+#     "services": ["Redis"]
+#   },
+#   "JobsController#update": {
+#     "read": ["table1", "table2"],
+#     "write": ["table1"],
+#     "services": ["Redis", "Sidekiq"]
+#   }
+# }
+
+# Configuration 8: JSON print and JSON log (different behaviors)
+# RailsActionTracker::Tracker.configure(
+#   print_format: :json,        # Console shows current action JSON
+#   log_format: :json,          # Log file accumulates all actions
+#   print_to_rails_log: true,
+#   write_to_file: true,
+#   log_file_path: Rails.root.join('log', 'action_tracker.json')
+# )
+# Print: Shows only current action's JSON data
+# Log: Accumulates all actions in a single JSON structure
+
+# Configuration 9: Backward compatibility (deprecated but still supported)
+# RailsActionTracker::Tracker.configure(
+#   output_format: :json        # Will set both print_format and log_format to :json
+# )
+# Note: output_format is deprecated, use print_format and log_format for better control

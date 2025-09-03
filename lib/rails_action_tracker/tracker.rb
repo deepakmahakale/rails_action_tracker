@@ -16,6 +16,9 @@ module RailsActionTracker
           print_to_rails_log: true,
           write_to_file: false,
           log_file_path: nil,
+          print_format: :table,
+          log_format: nil,
+          output_format: nil, # Deprecated: kept for backward compatibility
           services: [],
           ignored_tables: %w[pg_attribute pg_index pg_class pg_namespace pg_type ar_internal_metadata
                              schema_migrations],
@@ -23,7 +26,17 @@ module RailsActionTracker
           ignored_actions: {}
         }.merge(options)
 
-        setup_custom_logger if @config[:write_to_file] && @config[:log_file_path]
+        # Handle backward compatibility with output_format
+        if @config[:output_format] && !options.key?(:print_format) && !options.key?(:log_format)
+          @config[:print_format] = @config[:output_format]
+          @config[:log_format] = @config[:output_format]
+        end
+
+        # Default log_format to print_format if not specified
+        @config[:log_format] ||= @config[:print_format]
+
+        # Only setup custom logger for non-JSON formats (JSON writes directly to file)
+        setup_custom_logger if @config[:write_to_file] && @config[:log_file_path] && @config[:log_format] != :json
       end
 
       def start_tracking
@@ -60,11 +73,31 @@ module RailsActionTracker
 
         controller_action = "#{logs[:controller]}##{logs[:action]}" if logs[:controller] && logs[:action]
 
-        # Generate outputs with and without colors
-        colored_output = format_summary(read_models, write_models, services_accessed, controller_action, true)
-        plain_output = format_summary(read_models, write_models, services_accessed, controller_action, false)
+        # Generate outputs based on configured formats
+        print_format = config&.dig(:print_format) || :table
+        log_format = config&.dig(:log_format) || print_format
 
-        log_output(colored_output, plain_output)
+        # Generate print output
+        print_colored_output, print_plain_output = generate_format_output(
+          print_format, read_models, write_models, services_accessed, controller_action, true
+        )
+
+        # Log print output to Rails log if enabled
+        log_output(print_colored_output, print_plain_output) if config&.dig(:print_to_rails_log)
+
+        # Generate log file output if file logging is enabled
+        return unless config&.dig(:write_to_file) && config[:log_file_path]
+
+        if log_format == :json
+          # For JSON log format, accumulate data directly to file
+          accumulate_json_data(read_models, write_models, services_accessed, controller_action)
+        else
+          # For other log formats, generate output and write to custom logger
+          _, log_plain_output = generate_format_output(
+            log_format, read_models, write_models, services_accessed, controller_action, false
+          )
+          custom_logger&.info(log_plain_output)
+        end
       end
 
       private
@@ -160,7 +193,7 @@ module RailsActionTracker
       end
 
       # rubocop:disable Style/OptionalBooleanParameter
-      def format_summary(read_models, write_models, services, controller_action = nil, colorize = true)
+      def format_table_summary(read_models, write_models, services, controller_action = nil, colorize = true)
         colors = setup_colors(colorize)
         max_rows = [read_models.size, write_models.size, services.size].max
 
@@ -172,6 +205,103 @@ module RailsActionTracker
         build_table(padded_arrays, column_widths, controller_action, colors, max_rows)
       end
       # rubocop:enable Style/OptionalBooleanParameter
+
+      def format_csv_summary(read_models, write_models, services, controller_action = nil)
+        if read_models.empty? && write_models.empty? && services.empty?
+          return "Action\nNo models or services accessed during this request.\n"
+        end
+
+        # Get all unique table names and service names
+        all_tables = (read_models + write_models).uniq.sort
+        all_services = services.uniq.sort
+
+        # Create header
+        header = ['Action'] + all_tables + all_services
+        csv_output = "#{header.join(',')}\n"
+
+        # Create data row
+        action_name = controller_action || 'Unknown'
+        row = [action_name]
+
+        # Add table columns (R for read, W for write, RW for both, - for none)
+        all_tables.each do |table|
+          row << if read_models.include?(table) && write_models.include?(table)
+                   'RW'
+                 elsif read_models.include?(table)
+                   'R'
+                 elsif write_models.include?(table)
+                   'W'
+                 else
+                   '-'
+                 end
+        end
+
+        # Add service columns (Y for accessed, - for not accessed)
+        all_services.each do |service|
+          row << (services.include?(service) ? 'Y' : '-')
+        end
+
+        csv_output += "#{row.join(',')}\n"
+        csv_output
+      end
+
+      def format_json_summary(read_models, write_models, services, controller_action = nil)
+        require 'json'
+
+        action_name = controller_action || 'Unknown'
+
+        result = {
+          action_name => {
+            'read' => read_models.uniq.sort,
+            'write' => write_models.uniq.sort,
+            'services' => services.uniq.sort
+          }
+        }
+
+        JSON.pretty_generate(result)
+      end
+
+      def format_json_print_summary(read_models, write_models, services, controller_action = nil)
+        require 'json'
+
+        action_name = controller_action || 'Unknown'
+
+        # For printing, show only current action's data in a clean format
+        result = {
+          'read' => read_models.uniq.sort,
+          'write' => write_models.uniq.sort,
+          'services' => services.uniq.sort
+        }
+
+        "#{action_name}: #{JSON.pretty_generate(result)}"
+      end
+
+      def generate_format_output(format, read_models, write_models, services, controller_action, colorize)
+        case format
+        when :csv
+          output = format_csv_summary(read_models, write_models, services, controller_action)
+          [output, output]
+        when :json
+          output = format_json_print_summary(read_models, write_models, services, controller_action)
+          [output, output]
+        else
+          colored_output = format_table_summary(read_models, write_models, services, controller_action, colorize)
+          plain_output = format_table_summary(read_models, write_models, services, controller_action, false)
+          [colored_output, plain_output]
+        end
+      end
+
+      def accumulate_json_data(read_models, write_models, services, controller_action = nil)
+        return unless config&.dig(:write_to_file) && config[:log_file_path]
+
+        action_name = controller_action || 'Unknown'
+        json_file_path = config[:log_file_path]
+
+        ensure_log_directory_exists(json_file_path)
+        update_json_file(json_file_path, action_name, read_models, write_models, services)
+      rescue StandardError => e
+        Rails.logger.error "Failed to accumulate JSON data: #{e.message}" if defined?(Rails)
+      end
 
       def setup_colors(colorize)
         return { green: '', red: '', blue: '', yellow: '', reset: '' } unless colorize
@@ -312,6 +442,72 @@ module RailsActionTracker
       def unsubscribe_from_logger
         ActiveSupport::Notifications.unsubscribe(@logger_subscriber) if @logger_subscriber
         @logger_subscriber = nil
+      end
+
+      def ensure_log_directory_exists(json_file_path)
+        log_dir = File.dirname(json_file_path)
+        FileUtils.mkdir_p(log_dir) unless Dir.exist?(log_dir)
+      end
+
+      def update_json_file(json_file_path, action_name, read_models, write_models, services)
+        File.open(json_file_path, File::RDWR | File::CREAT, 0o644) do |file|
+          file.flock(File::LOCK_EX)
+          existing_data = read_existing_json_data(file)
+          updated_data = merge_action_data(existing_data, action_name, read_models, write_models, services)
+          write_json_data(file, updated_data)
+        end
+      end
+
+      def read_existing_json_data(file)
+        require 'json'
+        file.rewind # Ensure we're at the beginning of the file
+        file_content = file.read.strip
+        return {} if file_content.empty?
+
+        JSON.parse(file_content)
+      rescue JSON::ParserError
+        {}
+      end
+
+      def merge_action_data(existing_data, action_name, read_models, write_models, services)
+        new_read_models = (read_models || []).uniq.sort
+        new_write_models = (write_models || []).uniq.sort
+        new_services = (services || []).uniq.sort
+
+        if existing_data[action_name]
+          merge_with_existing_action(existing_data, action_name, new_read_models, new_write_models, new_services)
+        else
+          add_new_action(existing_data, action_name, new_read_models, new_write_models, new_services)
+        end
+
+        existing_data
+      end
+
+      def merge_with_existing_action(existing_data, action_name, new_read, new_write, new_services)
+        existing_read = existing_data[action_name]['read'] || []
+        existing_write = existing_data[action_name]['write'] || []
+        existing_services = existing_data[action_name]['services'] || []
+
+        existing_data[action_name] = {
+          'read' => (existing_read + new_read).uniq.sort,
+          'write' => (existing_write + new_write).uniq.sort,
+          'services' => (existing_services + new_services).uniq.sort
+        }
+      end
+
+      def add_new_action(existing_data, action_name, new_read, new_write, new_services)
+        existing_data[action_name] = {
+          'read' => new_read,
+          'write' => new_write,
+          'services' => new_services
+        }
+      end
+
+      def write_json_data(file, data)
+        require 'json'
+        file.rewind
+        file.write(JSON.pretty_generate(data))
+        file.truncate(file.pos)
       end
     end
   end
