@@ -229,9 +229,11 @@ RailsActionTracker::Tracker.configure(
 )
 ```
 # Results in accumulated CSV like:
-# Action,Redis,Sidekiq,posts,profiles,users  
-# UsersController#show,Y,-,R,R,RW
-# PostsController#create,-,Y,RW,-,R
+
+| Action | Redis | Sidekiq | posts | profiles | users |
+| :-- | :-- | :-- | :-- | :-- | :-- |
+| UsersController\#show | Y | - | R | R | RW |
+| PostsController\#create | - | Y | RW | - | R |
 
 **Option 7: CSV print and CSV log (different behaviors)**
 ```ruby
