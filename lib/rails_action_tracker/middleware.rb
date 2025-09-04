@@ -31,8 +31,8 @@ module RailsActionTracker
 
       # Only track if Rails is defined and it's not a test environment (unless explicitly enabled)
       return false unless defined?(Rails)
-      return true if RailsActionTracker::Tracker.config && RailsActionTracker::Tracker.config[:track_in_test]
-      !Rails.env.test?
+
+      true
     end
   end
 end
