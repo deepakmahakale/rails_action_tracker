@@ -29,8 +29,10 @@ module RailsActionTracker
       return false if request.path.start_with?('/assets', '/health', '/favicon')
       return false if request.path.end_with?('.js', '.css', '.png', '.jpg', '.gif', '.ico')
 
-      # Only track if Rails is defined and it's not a test environment
-      defined?(Rails) && !Rails.env.test?
+      # Only track if Rails is defined and it's not a test environment (unless explicitly enabled)
+      return false unless defined?(Rails)
+      return true if RailsActionTracker::Tracker.config && RailsActionTracker::Tracker.config[:track_in_test]
+      !Rails.env.test?
     end
   end
 end

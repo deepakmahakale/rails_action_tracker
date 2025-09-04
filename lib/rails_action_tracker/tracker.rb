@@ -18,6 +18,7 @@ module RailsActionTracker
           log_file_path: 'log/action_tracker.json',
           print_format: :json,
           log_format: nil,
+          track_in_test: true,
           services: [],
           ignored_tables: %w[pg_attribute pg_index pg_class pg_namespace pg_type ar_internal_metadata
                              schema_migrations],
